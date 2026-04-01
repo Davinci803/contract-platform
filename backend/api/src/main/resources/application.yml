@@ -1,0 +1,34 @@
+spring:
+  application:
+    name: contract-platform-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/contracts}
+    username: ${DB_USER:contracts}
+    password: ${DB_PASSWORD:contracts}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+  flyway:
+    enabled: true
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+logging:
+  level:
+    root: INFO
+    ru.vkr.contracts: INFO
