@@ -21,7 +21,6 @@ public class PublicationLog {
     @Column(nullable = false)
     private String status;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 

@@ -18,7 +18,6 @@ public class ContractVersion {
     @Column(nullable = false)
     private String version;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 

@@ -23,11 +23,9 @@ public class CompatibilityReport {
     @Column(nullable = false)
     private String semverRecommendation;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String findings;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String migrationAdvice;
 

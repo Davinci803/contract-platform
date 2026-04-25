@@ -32,3 +32,10 @@ logging:
   level:
     root: INFO
     ru.vkr.contracts: INFO
+
+generation:
+  jobs:
+    recovery:
+      enabled: true
+      stale-threshold-ms: 600000
+      scan-interval-ms: 60000

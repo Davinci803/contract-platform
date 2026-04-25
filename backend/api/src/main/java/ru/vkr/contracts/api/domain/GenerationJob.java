@@ -26,7 +26,6 @@ public class GenerationJob {
     @Column
     private Instant updatedAt;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String log;
 
@@ -58,6 +57,10 @@ public class GenerationJob {
 
     public void markRunning() {
         this.status = JobStatus.RUNNING;
+        this.updatedAt = Instant.now();
+    }
+
+    public void touch() {
         this.updatedAt = Instant.now();
     }
 

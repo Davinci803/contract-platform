@@ -4,4 +4,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import ru.vkr.contracts.api.domain.GeneratedArtifact;
 
 public interface GeneratedArtifactRepository extends JpaRepository<GeneratedArtifact, Long> {
+    long countByJob_Id(Long jobId);
 }
