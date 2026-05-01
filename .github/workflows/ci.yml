@@ -15,7 +15,7 @@ jobs:
           distribution: temurin
           java-version: "21"
       - name: Build and test backend
-        run: mvn -f contract-platform/backend/pom.xml clean verify
+        run: mvn -f backend/pom.xml clean verify
 
   frontend:
     runs-on: ubuntu-latest
@@ -25,7 +25,7 @@ jobs:
         with:
           node-version: "20"
       - name: Build frontend
+        working-directory: frontend
         run: |
-          cd contract-platform/frontend
           npm ci
           npm run build
