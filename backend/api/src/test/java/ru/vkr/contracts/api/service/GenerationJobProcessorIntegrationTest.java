@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -70,7 +71,7 @@ class GenerationJobProcessorIntegrationTest {
 
     @Test
     void shouldCompleteJobInBackground() {
-        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString()))
+        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString(), nullable(String.class)))
                 .thenReturn(new GenerationResult(
                         "ru.vkr.contracts.generated",
                         "payment-api-rest-client",
@@ -93,7 +94,7 @@ class GenerationJobProcessorIntegrationTest {
 
     @Test
     void shouldMarkJobAsFailedWhenPipelineThrowsException() {
-        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString()))
+        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString(), nullable(String.class)))
                 .thenThrow(new IllegalArgumentException("OpenAPI signature not found"));
 
         ContractVersion version = createOpenApiVersion("invalid openapi");
@@ -109,7 +110,7 @@ class GenerationJobProcessorIntegrationTest {
 
     @Test
     void shouldIgnoreSecondProcessingAttemptForSameJob() {
-        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString()))
+        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString(), nullable(String.class)))
                 .thenReturn(new GenerationResult(
                         "ru.vkr.contracts.generated",
                         "payment-api-rest-client",

@@ -1,28 +1,21 @@
-package ru.vkr.contracts.api.service;
+package ru.vkr.contracts.worker.generation;
 
 import io.swagger.parser.OpenAPIParser;
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.parser.core.models.ParseOptions;
 import io.swagger.v3.parser.core.models.SwaggerParseResult;
-import org.springframework.stereotype.Service;
-import ru.vkr.contracts.shared.model.ContractType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Service
-public class ValidationService {
+@Component
+public class OpenApiSpecValidator {
 
-    public void validateByType(ContractType type, String content) {
+    public OpenAPI parseAndValidate(String content, String label, StringBuilder log) {
+        appendStage(log, "validation", "parsing " + label + " spec");
         if (content == null || content.isBlank()) {
-            throw new IllegalArgumentException("Specification content is empty");
+            throw new IllegalArgumentException("OpenAPI content is empty");
         }
-        switch (type) {
-            case OPENAPI -> validateOpenApi(content);
-            case ASYNCAPI -> validateAsyncApi(content);
-        }
-    }
-
-    private void validateOpenApi(String content) {
         ParseOptions options = new ParseOptions();
         options.setResolve(true);
         options.setResolveFully(true);
@@ -36,16 +29,16 @@ public class ValidationService {
             throw new IllegalArgumentException("OpenAPI validation errors: " + String.join("; ", messages));
         }
         if (openAPI.getPaths() == null || openAPI.getPaths().isEmpty()) {
-            throw new IllegalArgumentException("OpenAPI paths section is missing");
+            throw new IllegalArgumentException("OpenAPI paths section is empty");
         }
+        appendStage(log, "validation", "parsed successfully, paths=" + openAPI.getPaths().size());
+        return openAPI;
     }
 
-    private void validateAsyncApi(String content) {
-        if (!(content.contains("asyncapi:") || content.contains("\"asyncapi\""))) {
-            throw new IllegalArgumentException("AsyncAPI signature is missing");
+    private void appendStage(StringBuilder log, String stage, String message) {
+        if (!log.isEmpty()) {
+            log.append('\n');
         }
-        if (!content.contains("channels")) {
-            throw new IllegalArgumentException("AsyncAPI channels section is missing");
-        }
+        log.append('[').append(stage).append("] ").append(message);
     }
 }

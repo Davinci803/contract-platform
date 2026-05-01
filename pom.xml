@@ -12,4 +12,19 @@
     <modules>
         <module>backend</module>
     </modules>
+
+    <properties>
+        <jacoco.version>0.8.12</jacoco.version>
+    </properties>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+            </plugin>
+        </plugins>
+    </build>
+
 </project>

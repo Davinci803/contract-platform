@@ -25,7 +25,7 @@ public class ContractController {
     }
 
     @GetMapping("/{contractId}/versions")
-    public List<ContractVersionResponse> history(@PathVariable Long contractId) {
+    public List<ContractVersionResponse> history(@PathVariable("contractId") Long contractId) {
         return contractService.history(contractId);
     }
 }

@@ -29,7 +29,18 @@ class ContractFlowIntegrationTest {
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(Map.of(
                 "name", "Payment API",
                 "type", "OPENAPI",
-                "content", "openapi: 3.0.1\npaths:\n  /api/pay:\n    get: {}",
+                "content", """
+                        openapi: 3.0.1
+                        info:
+                          title: Payment API
+                          version: 1.0.0
+                        paths:
+                          /api/pay:
+                            get:
+                              responses:
+                                "200":
+                                  description: ok
+                        """,
                 "author", "tester"
         ), headers);
 

@@ -23,7 +23,7 @@ public class GenerationController {
     }
 
     @GetMapping("/{jobId}")
-    public JobResponse get(@PathVariable Long jobId) {
+    public JobResponse get(@PathVariable("jobId") Long jobId) {
         return generationJobService.get(jobId);
     }
 }

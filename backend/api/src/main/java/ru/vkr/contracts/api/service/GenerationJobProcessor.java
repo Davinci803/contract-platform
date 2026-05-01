@@ -100,7 +100,7 @@ public class GenerationJobProcessor {
             ));
             job.touch();
 
-            GenerationResult generationResult = runPipeline(current);
+            GenerationResult generationResult = runPipeline(current, previous);
             generatedArtifactRepository.save(new GeneratedArtifact(
                     job,
                     generationResult.coordinates(),
@@ -124,10 +124,16 @@ public class GenerationJobProcessor {
         return true;
     }
 
-    private GenerationResult runPipeline(ContractVersion version) {
+    private GenerationResult runPipeline(ContractVersion version, ContractVersion previousVersion) {
         String contractName = version.getContract().getName();
+        String previousContent = previousVersion == null ? null : previousVersion.getContent();
         return switch (version.getContract().getType()) {
-            case OPENAPI -> openApiPipeline.generateAndPublish(contractName, version.getVersion(), version.getContent());
+            case OPENAPI -> openApiPipeline.generateAndPublish(
+                    contractName,
+                    version.getVersion(),
+                    version.getContent(),
+                    previousContent
+            );
             case ASYNCAPI -> asyncApiPipeline.generateAndPublish(contractName, version.getVersion(), version.getContent());
         };
     }

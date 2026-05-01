@@ -11,7 +11,18 @@ class ValidationServiceTest {
 
     @Test
     void shouldValidateOpenApi() {
-        String content = "openapi: 3.0.1\npaths:\n  /api/test:\n    get: {}";
+        String content = """
+                openapi: 3.0.1
+                info:
+                  title: Test API
+                  version: 1.0.0
+                paths:
+                  /api/test:
+                    get:
+                      responses:
+                        "200":
+                          description: ok
+                """;
         assertDoesNotThrow(() -> validationService.validateByType(ContractType.OPENAPI, content));
     }
 
