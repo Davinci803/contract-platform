@@ -1,4 +1,4 @@
-package ru.vkr.contracts.worker.generation;
+package ru.vkr.contracts.worker.generation.openapi;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.PathItem;

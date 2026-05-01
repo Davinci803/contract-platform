@@ -1,4 +1,4 @@
-package ru.vkr.contracts.worker.generation;
+package ru.vkr.contracts.worker.generation.core.build;
 
 import org.springframework.stereotype.Component;
 
@@ -17,9 +17,9 @@ import java.util.jar.JarOutputStream;
 import java.util.stream.Stream;
 
 @Component
-public class OpenApiArtifactBuilder {
+public class ArtifactBuilder {
 
-    public Path buildJar(OpenApiGenerationPaths paths, String artifactId, String version, StringBuilder log) throws IOException {
+    public Path buildJar(GenerationPaths paths, String artifactId, String version, StringBuilder log) throws IOException {
         appendStage(log, "build", "compiling generated sources");
         Files.createDirectories(paths.targetRoot());
         Path classesDir = paths.targetRoot().resolve("classes");

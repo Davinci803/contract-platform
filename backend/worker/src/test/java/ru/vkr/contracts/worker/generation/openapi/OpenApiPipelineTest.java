@@ -1,9 +1,10 @@
-package ru.vkr.contracts.worker.generation;
+package ru.vkr.contracts.worker.generation.openapi;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import ru.vkr.contracts.worker.generation.model.GenerationResult;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

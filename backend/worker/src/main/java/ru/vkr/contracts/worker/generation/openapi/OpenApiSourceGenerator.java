@@ -1,4 +1,4 @@
-package ru.vkr.contracts.worker.generation;
+package ru.vkr.contracts.worker.generation.openapi;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.Operation;
@@ -6,12 +6,12 @@ import io.swagger.v3.oas.models.PathItem;
 import io.swagger.v3.oas.models.media.ArraySchema;
 import io.swagger.v3.oas.models.media.Schema;
 import org.springframework.stereotype.Component;
+import ru.vkr.contracts.worker.generation.core.build.GenerationPaths;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @Component
 public class OpenApiSourceGenerator {
 
-    public OpenApiGenerationPaths generate(
+    public GenerationPaths generate(
             Path workspace,
             String basePackage,
             String contractName,
@@ -42,7 +42,7 @@ public class OpenApiSourceGenerator {
         generateClientClass(openAPI, clientDir, basePackage, contractName);
         generateMetadataClass(clientDir, basePackage, artifactId, version, diffSummary);
         appendStage(log, "generation", "generated dto=" + dtoCount + ", client=1, metadata=1");
-        return new OpenApiGenerationPaths(sourceRoot, workspace.resolve("target"));
+        return new GenerationPaths(sourceRoot, workspace.resolve("target"));
     }
 
     @SuppressWarnings("unchecked")

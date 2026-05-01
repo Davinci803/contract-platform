@@ -47,3 +47,18 @@ generation:
       repository: ${NEXUS_REPOSITORY:maven-releases}
       username: ${NEXUS_USERNAME:}
       password: ${NEXUS_PASSWORD:}
+  async-api:
+    group-id: ${GEN_ASYNCAPI_GROUP_ID:ru.vkr.contracts.generated}
+    artifact-suffix: ${GEN_ASYNCAPI_ARTIFACT_SUFFIX:kafka-lib}
+    nexus:
+      base-url: ${NEXUS_BASE_URL:http://localhost:8081}
+      repository: ${NEXUS_REPOSITORY:maven-releases}
+      username: ${NEXUS_USERNAME:}
+      password: ${NEXUS_PASSWORD:}
+    schema-registry:
+      base-url: ${SCHEMA_REGISTRY_URL:http://localhost:8085}
+      username: ${SCHEMA_REGISTRY_USERNAME:}
+      password: ${SCHEMA_REGISTRY_PASSWORD:}
+      compatibility: ${SCHEMA_REGISTRY_COMPATIBILITY:BACKWARD}
+      schema-type: ${SCHEMA_REGISTRY_SCHEMA_TYPE:AVRO}
+      subject-suffix: ${SCHEMA_REGISTRY_SUBJECT_SUFFIX:value}

@@ -1,4 +1,4 @@
-package ru.vkr.contracts.worker.generation;
+package ru.vkr.contracts.worker.generation.openapi;
 
 public record OpenApiDiffSummary(
         int addedEndpoints,

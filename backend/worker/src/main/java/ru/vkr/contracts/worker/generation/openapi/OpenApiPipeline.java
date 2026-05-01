@@ -1,9 +1,12 @@
-package ru.vkr.contracts.worker.generation;
+package ru.vkr.contracts.worker.generation.openapi;
 
 import io.swagger.v3.oas.models.OpenAPI;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import ru.vkr.contracts.worker.generation.core.build.ArtifactBuilder;
+import ru.vkr.contracts.worker.generation.core.build.GenerationPaths;
+import ru.vkr.contracts.worker.generation.model.GenerationResult;
 
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -20,7 +23,7 @@ public class OpenApiPipeline {
     private final OpenApiDiffTool openApiDiffTool;
     private final OpenApiSpecValidator specValidator;
     private final OpenApiSourceGenerator sourceGenerator;
-    private final OpenApiArtifactBuilder artifactBuilder;
+    private final ArtifactBuilder artifactBuilder;
     private final OpenApiNexusPublisher nexusPublisher;
 
     @Autowired
@@ -30,7 +33,7 @@ public class OpenApiPipeline {
             OpenApiDiffTool openApiDiffTool,
             OpenApiSpecValidator specValidator,
             OpenApiSourceGenerator sourceGenerator,
-            OpenApiArtifactBuilder artifactBuilder,
+            ArtifactBuilder artifactBuilder,
             OpenApiNexusPublisher nexusPublisher
     ) {
         this.groupId = groupId;
@@ -57,7 +60,7 @@ public class OpenApiPipeline {
                 openApiDiffTool,
                 new OpenApiSpecValidator(),
                 new OpenApiSourceGenerator(),
-                new OpenApiArtifactBuilder(),
+                new ArtifactBuilder(),
                 new OpenApiNexusPublisher(
                         nexusBaseUrl,
                         nexusRepository,
@@ -82,7 +85,7 @@ public class OpenApiPipeline {
 
             String artifactId = toArtifactId(contractName);
             String basePackage = groupId + "." + artifactId.replace("-", ".");
-            OpenApiGenerationPaths paths = sourceGenerator.generate(
+            GenerationPaths paths = sourceGenerator.generate(
                     workspace,
                     basePackage,
                     contractName,

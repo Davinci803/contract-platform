@@ -19,8 +19,8 @@ import ru.vkr.contracts.api.repo.GenerationJobRepository;
 import ru.vkr.contracts.api.repo.PublicationLogRepository;
 import ru.vkr.contracts.shared.model.ContractType;
 import ru.vkr.contracts.shared.model.JobStatus;
-import ru.vkr.contracts.worker.generation.GenerationResult;
-import ru.vkr.contracts.worker.generation.OpenApiPipeline;
+import ru.vkr.contracts.worker.generation.openapi.OpenApiPipeline;
+import ru.vkr.contracts.worker.generation.model.GenerationResult;
 
 import java.time.Duration;
 import java.time.Instant;

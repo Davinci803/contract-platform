@@ -1,8 +1,4 @@
-package ru.vkr.contracts.worker.generation;
-
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+package ru.vkr.contracts.worker.generation.core.publish;
 
 import java.io.IOException;
 import java.net.URI;
@@ -13,29 +9,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Base64;
 
-@Component
-public class OpenApiNexusPublisher {
+public class NexusPublisher {
     private final String nexusBaseUrl;
     private final String nexusRepository;
     private final String nexusUsername;
     private final String nexusPassword;
     private final HttpClient httpClient;
 
-    @Autowired
-    public OpenApiNexusPublisher(
-            @Value("${generation.open-api.nexus.base-url:http://localhost:8081}") String nexusBaseUrl,
-            @Value("${generation.open-api.nexus.repository:maven-releases}") String nexusRepository,
-            @Value("${generation.open-api.nexus.username:}") String nexusUsername,
-            @Value("${generation.open-api.nexus.password:}") String nexusPassword
-    ) {
-        this.nexusBaseUrl = stripTrailingSlash(nexusBaseUrl);
-        this.nexusRepository = nexusRepository;
-        this.nexusUsername = nexusUsername;
-        this.nexusPassword = nexusPassword;
-        this.httpClient = HttpClient.newBuilder().build();
-    }
-
-    public OpenApiNexusPublisher(
+    public NexusPublisher(
             String nexusBaseUrl,
             String nexusRepository,
             String nexusUsername,
@@ -44,8 +25,8 @@ public class OpenApiNexusPublisher {
     ) {
         this.nexusBaseUrl = stripTrailingSlash(nexusBaseUrl);
         this.nexusRepository = nexusRepository;
-        this.nexusUsername = nexusUsername;
-        this.nexusPassword = nexusPassword;
+        this.nexusUsername = nexusUsername == null ? "" : nexusUsername;
+        this.nexusPassword = nexusPassword == null ? "" : nexusPassword;
         this.httpClient = httpClient;
     }
 
