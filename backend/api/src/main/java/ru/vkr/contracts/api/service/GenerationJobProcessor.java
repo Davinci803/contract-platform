@@ -16,6 +16,8 @@ import ru.vkr.contracts.api.repo.GenerationJobRepository;
 import ru.vkr.contracts.api.repo.PublicationLogRepository;
 import ru.vkr.contracts.shared.model.ContractType;
 import ru.vkr.contracts.shared.model.JobStatus;
+import ru.vkr.contracts.worker.compat.ChangeSeverity;
+import ru.vkr.contracts.worker.compat.CompatibilityFinding;
 import ru.vkr.contracts.worker.compat.CompatibilityAnalyzer;
 import ru.vkr.contracts.worker.compat.CompatibilityResult;
 import ru.vkr.contracts.worker.generation.openapi.OpenApiPipeline;
@@ -23,6 +25,7 @@ import ru.vkr.contracts.worker.generation.asyncapi.AsyncApiPipeline;
 import ru.vkr.contracts.worker.generation.model.GenerationResult;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 @Component
@@ -89,13 +92,14 @@ public class GenerationJobProcessor {
                     .orElse(null);
             CompatibilityResult compatibility = compatibilityAnalyzer.analyze(
                     previous == null ? null : previous.getContent(),
-                    current.getContent()
+                    current.getContent(),
+                    current.getContract().getType()
             );
             compatibilityReportRepository.save(new CompatibilityReport(
                     current,
                     compatibility.level(),
                     compatibility.recommendedSemverIncrement(),
-                    String.join("; ", compatibility.findings()),
+                    compatibility.findingsAsJson(),
                     migrationAdvice(compatibility, current.getContract().getType())
             ));
             job.touch();
@@ -139,13 +143,26 @@ public class GenerationJobProcessor {
     }
 
     private String migrationAdvice(CompatibilityResult compatibility, ContractType type) {
+        if (compatibility.findings().stream().anyMatch(f -> "INITIAL_VERSION".equals(f.code()))) {
+            return "Initial release detected. Publish as MINOR, announce baseline, and lock compatibility checks for the next revision.";
+        }
         if (compatibility.level().name().equals("COMPATIBLE")) {
-            return "Compatible change detected. Prefer MINOR release and keep rollout notes.";
+            return "Non-breaking changes detected. Bump " + compatibility.recommendedSemverIncrement()
+                    + ", update changelog, and run consumer smoke tests before rollout.";
         }
+        List<String> criticalLocations = compatibility.findings().stream()
+                .filter(CompatibilityFinding::breaking)
+                .filter(f -> f.severity() == ChangeSeverity.CRITICAL || f.severity() == ChangeSeverity.MAJOR)
+                .map(CompatibilityFinding::location)
+                .limit(3)
+                .toList();
+        String hotspots = criticalLocations.isEmpty() ? "key API elements" : String.join(", ", criticalLocations);
         if (type == ContractType.OPENAPI) {
-            return "Breaking REST change. Deprecate old fields/endpoints and publish MAJOR with transition period.";
+            return "Breaking REST changes detected in " + hotspots
+                    + ". Publish MAJOR, keep deprecated endpoint/field aliases for one transition window, and share migration examples with consumers.";
         }
-        return "Breaking event schema. Use new topic/version suffix and keep backward-compatible consumers during migration.";
+        return "Breaking event-schema changes detected in " + hotspots
+                + ". Publish MAJOR, version topic/subject names, and run dual-consumer mode until all consumers are migrated.";
     }
 
     private FailureType classifyFailure(Throwable e) {
