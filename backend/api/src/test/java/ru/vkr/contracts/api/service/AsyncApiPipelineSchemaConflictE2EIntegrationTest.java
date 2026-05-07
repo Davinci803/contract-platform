@@ -8,6 +8,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -53,6 +54,8 @@ class AsyncApiPipelineSchemaConflictE2EIntegrationTest {
     private PublicationLogRepository publicationLogRepository;
     @Autowired
     private CompatibilityReportRepository compatibilityReportRepository;
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @DynamicPropertySource
     static void registerProperties(DynamicPropertyRegistry registry) {
@@ -97,9 +100,16 @@ class AsyncApiPipelineSchemaConflictE2EIntegrationTest {
         JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(10));
 
         assertEquals(JobStatus.FAILED, completedJob.status());
-        assertTrue(completedJob.log().contains("compatibility conflict"));
+        assertTrue(completedJob.log().contains("business-incompatible"));
         assertEquals(0, generatedArtifactRepository.countByJob_Id(createdJob.jobId()));
-        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "FAILED_NON_RETRYABLE"));
+        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "FAILED_BUSINESS_INCOMPATIBLE"));
+        String errorCategory = jdbcTemplate.queryForObject(
+                "select error_category from publication_logs where job_id = ? and status = ?",
+                String.class,
+                createdJob.jobId(),
+                "FAILED_BUSINESS_INCOMPATIBLE"
+        );
+        assertEquals("BUSINESS", errorCategory);
     }
 
     private ContractVersion createVersion(String name, String content) {

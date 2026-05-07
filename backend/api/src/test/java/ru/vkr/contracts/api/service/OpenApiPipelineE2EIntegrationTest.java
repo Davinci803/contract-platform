@@ -107,7 +107,7 @@ class OpenApiPipelineE2EIntegrationTest {
         assertEquals(JobStatus.SUCCESS, completedJob.status());
         assertTrue(completedJob.log().contains("[publish] uploaded jar and pom"));
         assertEquals(1, generatedArtifactRepository.countByJob_Id(createdJob.jobId()));
-        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "SUCCESS"));
+        assertEquals(1, publicationLogRepository.countByJob_IdAndTargetAndStatus(createdJob.jobId(), "NEXUS", "SUCCESS"));
         assertTrue(uploadedPaths.stream().anyMatch(path -> path.endsWith(".jar")));
         assertTrue(uploadedPaths.stream().anyMatch(path -> path.endsWith(".pom")));
 

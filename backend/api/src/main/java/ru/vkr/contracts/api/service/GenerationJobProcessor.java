@@ -83,6 +83,14 @@ public class GenerationJobProcessor {
 
         GenerationJob job = generationJobRepository.findById(jobId)
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + jobId));
+        publicationLogRepository.save(new PublicationLog(
+                job,
+                "PIPELINE",
+                "RUNNING",
+                "event=job-claimed; stage=claim",
+                "JOB_CLAIMED",
+                PublicationLog.ERROR_CATEGORY_NONE
+        ));
         try {
             ContractVersion current = job.getContractVersion();
             ContractVersion previous = contractVersionRepository.findByContractOrderByIdDesc(current.getContract())
@@ -90,6 +98,14 @@ public class GenerationJobProcessor {
                     .filter(v -> !v.getId().equals(current.getId()))
                     .findFirst()
                     .orElse(null);
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "COMPATIBILITY",
+                    "RUNNING",
+                    "event=compatibility-started; stage=compatibility",
+                    "COMPATIBILITY_STARTED",
+                    PublicationLog.ERROR_CATEGORY_NONE
+            ));
             CompatibilityResult compatibility = compatibilityAnalyzer.analyze(
                     previous == null ? null : previous.getContent(),
                     current.getContent(),
@@ -102,8 +118,26 @@ public class GenerationJobProcessor {
                     compatibility.findingsAsJson(),
                     migrationAdvice(compatibility, current.getContract().getType())
             ));
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "COMPATIBILITY",
+                    "SUCCESS",
+                    "event=compatibility-finished; findings=" + compatibility.findings().size()
+                            + "; level=" + compatibility.level()
+                            + "; semver=" + compatibility.recommendedSemverIncrement(),
+                    "COMPATIBILITY_FINISHED",
+                    PublicationLog.ERROR_CATEGORY_NONE
+            ));
             job.touch();
 
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "PIPELINE",
+                    "RUNNING",
+                    "event=pipeline-started; stage=generation",
+                    "PIPELINE_STARTED",
+                    PublicationLog.ERROR_CATEGORY_NONE
+            ));
             GenerationResult generationResult = runPipeline(current, previous);
             generatedArtifactRepository.save(new GeneratedArtifact(
                     job,
@@ -111,15 +145,44 @@ public class GenerationJobProcessor {
                     generationResult.publicationUrl(),
                     generationResult.schemaSubject()
             ));
-            publicationLogRepository.save(new PublicationLog(job, "NEXUS", "SUCCESS", generationResult.publicationUrl()));
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "NEXUS",
+                    "SUCCESS",
+                    "event=nexus-published; url=" + generationResult.publicationUrl(),
+                    "NEXUS_PUBLISHED",
+                    PublicationLog.ERROR_CATEGORY_NONE
+            ));
             if (generationResult.schemaSubject() != null) {
-                publicationLogRepository.save(new PublicationLog(job, "SCHEMA_REGISTRY", "SUCCESS", generationResult.schemaSubject()));
+                publicationLogRepository.save(new PublicationLog(
+                        job,
+                        "SCHEMA_REGISTRY",
+                        "SUCCESS",
+                        "event=schema-registered; subject=" + generationResult.schemaSubject(),
+                        "SCHEMA_REGISTERED",
+                        PublicationLog.ERROR_CATEGORY_NONE
+                ));
             }
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "PIPELINE",
+                    "SUCCESS",
+                    "event=artifact-persisted; coordinates=" + generationResult.coordinates(),
+                    "ARTIFACT_PERSISTED",
+                    PublicationLog.ERROR_CATEGORY_NONE
+            ));
             job.markSuccess(generationResult.log());
         } catch (Throwable t) {
             FailureType failureType = classifyFailure(t);
             String failureMessage = "Generation failed [" + failureType.label + "]: " + normalizeErrorMessage(t);
-            publicationLogRepository.save(new PublicationLog(job, "PIPELINE", failureType.status, failureMessage));
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "PIPELINE",
+                    failureType.status,
+                    "event=pipeline-failed; category=" + failureType.errorCategory + "; message=" + failureMessage,
+                    "PIPELINE_FAILED",
+                    failureType.errorCategory
+            ));
             job.markFailed(failureMessage);
             if (t instanceof Error error) {
                 throw error;
@@ -166,6 +229,10 @@ public class GenerationJobProcessor {
     }
 
     private FailureType classifyFailure(Throwable e) {
+        String message = normalizeErrorMessage(e).toLowerCase();
+        if (message.contains("compatibility conflict") || message.contains("incompatible")) {
+            return FailureType.BUSINESS_INCOMPATIBLE;
+        }
         if (e instanceof IllegalArgumentException) {
             return FailureType.NON_RETRYABLE;
         }
@@ -183,15 +250,18 @@ public class GenerationJobProcessor {
     }
 
     private enum FailureType {
-        RETRYABLE("retryable", "FAILED_RETRYABLE"),
-        NON_RETRYABLE("non-retryable", "FAILED_NON_RETRYABLE");
+        RETRYABLE("retryable", "FAILED_RETRYABLE", PublicationLog.ERROR_CATEGORY_TECHNICAL),
+        NON_RETRYABLE("non-retryable", "FAILED_NON_RETRYABLE", PublicationLog.ERROR_CATEGORY_TECHNICAL),
+        BUSINESS_INCOMPATIBLE("business-incompatible", "FAILED_BUSINESS_INCOMPATIBLE", PublicationLog.ERROR_CATEGORY_BUSINESS);
 
         private final String label;
         private final String status;
+        private final String errorCategory;
 
-        FailureType(String label, String status) {
+        FailureType(String label, String status, String errorCategory) {
             this.label = label;
             this.status = status;
+            this.errorCategory = errorCategory;
         }
     }
 }

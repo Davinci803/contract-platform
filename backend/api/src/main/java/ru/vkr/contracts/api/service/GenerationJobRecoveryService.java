@@ -43,7 +43,14 @@ public class GenerationJobRecoveryService {
         List<GenerationJob> staleRunningJobs = generationJobRepository.findByStatusAndUpdatedAtBefore(JobStatus.RUNNING, staleBefore);
         for (GenerationJob job : staleRunningJobs) {
             String message = "Generation watchdog marked stale RUNNING job as FAILED after timeout.";
-            publicationLogRepository.save(new PublicationLog(job, "RECOVERY", "FAILED_NON_RETRYABLE", message));
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "RECOVERY",
+                    "FAILED_NON_RETRYABLE",
+                    "event=watchdog-timeout; message=" + message,
+                    "WATCHDOG_TIMEOUT",
+                    PublicationLog.ERROR_CATEGORY_TECHNICAL
+            ));
             job.markFailed(message);
         }
     }

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import ru.vkr.contracts.shared.model.JobStatus;
 
 import java.time.Instant;
+import java.util.UUID;
 
 @Entity
 @Table(name = "generation_jobs")
@@ -29,6 +30,9 @@ public class GenerationJob {
     @Column(columnDefinition = "TEXT")
     private String log;
 
+    @Column(nullable = false, length = 64)
+    private String correlationId;
+
     protected GenerationJob() {
     }
 
@@ -37,6 +41,7 @@ public class GenerationJob {
         this.status = JobStatus.PENDING;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
+        this.correlationId = UUID.randomUUID().toString();
     }
 
     public Long getId() {
@@ -53,6 +58,10 @@ public class GenerationJob {
 
     public String getLog() {
         return log;
+    }
+
+    public String getCorrelationId() {
+        return correlationId;
     }
 
     public void markRunning() {

@@ -118,7 +118,7 @@ class AsyncApiPipelineE2EIntegrationTest {
         assertEquals(JobStatus.SUCCESS, completedJob.status());
         assertTrue(completedJob.log().contains("[schema-registry]"));
         assertEquals(1, generatedArtifactRepository.countByJob_Id(createdJob.jobId()));
-        assertEquals(2, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "SUCCESS"));
+        assertEquals(1, publicationLogRepository.countByJob_IdAndTargetAndStatus(createdJob.jobId(), "NEXUS", "SUCCESS"));
         assertEquals(1, publicationLogRepository.countByJob_IdAndTargetAndStatus(createdJob.jobId(), "SCHEMA_REGISTRY", "SUCCESS"));
         assertTrue(nexusUploads.stream().anyMatch(path -> path.endsWith(".jar")));
         assertTrue(registryRequests.stream().anyMatch(path -> path.startsWith("/subjects/")));

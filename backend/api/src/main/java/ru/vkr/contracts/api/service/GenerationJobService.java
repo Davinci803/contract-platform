@@ -35,11 +35,26 @@ public class GenerationJobService {
         ContractVersion contractVersion = contractVersionRepository.findById(contractVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("Contract version not found: " + contractVersionId));
         GenerationJob job = generationJobRepository.save(new GenerationJob(contractVersion));
+        publicationLogRepository.save(new PublicationLog(
+                job,
+                "PIPELINE",
+                "PENDING",
+                "event=job-created; contractVersionId=" + contractVersionId,
+                "JOB_CREATED",
+                PublicationLog.ERROR_CATEGORY_NONE
+        ));
         try {
             generationJobProcessor.processAsync(job.getId());
         } catch (TaskRejectedException e) {
             String message = "Generation queue is overloaded. Please retry later.";
-            publicationLogRepository.save(new PublicationLog(job, "PIPELINE", "FAILED_RETRYABLE", message));
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "PIPELINE",
+                    "FAILED_RETRYABLE",
+                    "event=queue-rejected; message=" + message,
+                    "QUEUE_REJECTED",
+                    PublicationLog.ERROR_CATEGORY_TECHNICAL
+            ));
             job.markFailed(message);
         }
         return toResponse(job);

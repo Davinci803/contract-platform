@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.vkr.contracts.api.domain.ContractVersion;
 import ru.vkr.contracts.api.domain.EntityContract;
 import ru.vkr.contracts.api.domain.GenerationJob;
+import ru.vkr.contracts.api.domain.PublicationLog;
 import ru.vkr.contracts.api.dto.JobResponse;
 import ru.vkr.contracts.api.repo.CompatibilityReportRepository;
 import ru.vkr.contracts.api.repo.ContractRepository;
@@ -24,6 +25,7 @@ import ru.vkr.contracts.worker.generation.model.GenerationResult;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -132,7 +134,7 @@ class GenerationJobProcessorIntegrationTest {
         assertFalse(secondAttemptProcessed);
         assertEquals(JobStatus.SUCCESS, finalState.status());
         assertEquals(1, generatedArtifactRepository.countByJob_Id(job.getId()));
-        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(job.getId(), "SUCCESS"));
+        assertEquals(1, publicationLogRepository.countByJob_IdAndTargetAndStatus(job.getId(), "NEXUS", "SUCCESS"));
     }
 
     @Test
@@ -156,6 +158,37 @@ class GenerationJobProcessorIntegrationTest {
                 "RECOVERY",
                 "FAILED_NON_RETRYABLE"
         ));
+    }
+
+    @Test
+    void shouldPersistDetailedAuditTrailWithSingleCorrelationId() {
+        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString(), nullable(String.class)))
+                .thenReturn(new GenerationResult(
+                        "ru.vkr.contracts.generated",
+                        "payment-api-rest-client",
+                        "1.0.0",
+                        "ru.vkr.contracts.generated:payment-api-rest-client:1.0.0",
+                        "http://localhost:8081/repository/maven-releases/payment-api-rest-client/1.0.0",
+                        null,
+                        "Pipeline completed successfully"
+                ));
+
+        ContractVersion version = createOpenApiVersion("openapi: 3.0.1\npaths:\n  /payments:\n    get: {}");
+        JobResponse createdJob = generationJobService.create(version.getId());
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(8));
+
+        assertEquals(JobStatus.SUCCESS, completedJob.status());
+        List<PublicationLog> logs = publicationLogRepository.findByJob_IdOrderByCreatedAtAsc(createdJob.jobId());
+        assertTrue(logs.size() >= 5);
+        assertTrue(logs.stream().anyMatch(log -> "JOB_CREATED".equals(log.getEventType())));
+        assertTrue(logs.stream().anyMatch(log -> "JOB_CLAIMED".equals(log.getEventType())));
+        assertTrue(logs.stream().anyMatch(log -> "PIPELINE_STARTED".equals(log.getEventType())));
+        assertTrue(logs.stream().anyMatch(log -> "ARTIFACT_PERSISTED".equals(log.getEventType())));
+
+        String correlationId = logs.getFirst().getCorrelationId();
+        assertTrue(correlationId != null && !correlationId.isBlank());
+        assertTrue(logs.stream().allMatch(log -> correlationId.equals(log.getCorrelationId())));
+        assertTrue(logs.stream().allMatch(log -> PublicationLog.ERROR_CATEGORY_NONE.equals(log.getErrorCategory())));
     }
 
     private ContractVersion createOpenApiVersion(String content) {
