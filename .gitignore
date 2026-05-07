@@ -5,4 +5,5 @@ dist/
 .DS_Store
 .env
 infra/.env.example
+frontend/.env.example
 Backlog.md

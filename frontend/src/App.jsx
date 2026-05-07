@@ -1,6 +1,25 @@
 import { useState } from "react";
 
-const auth = btoa("developer:dev123");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
+const API_USERNAME = (import.meta.env.VITE_API_USERNAME ?? "").trim();
+const API_PASSWORD = import.meta.env.VITE_API_PASSWORD ?? "";
+
+const missingConfigMessage =
+  "Frontend env is not configured. Set VITE_API_BASE_URL, VITE_API_USERNAME and VITE_API_PASSWORD.";
+
+function getAuthHeader() {
+  if (!API_USERNAME || !API_PASSWORD) {
+    return null;
+  }
+  return `Basic ${btoa(`${API_USERNAME}:${API_PASSWORD}`)}`;
+}
+
+function buildApiUrl(path) {
+  if (!API_BASE_URL) {
+    return null;
+  }
+  return `${API_BASE_URL}${path}`;
+}
 
 export default function App() {
   const [name, setName] = useState("Payment Contract");
@@ -14,11 +33,18 @@ export default function App() {
 
   async function upload() {
     setError("");
-    const response = await fetch("http://localhost:8080/api/contracts/versions", {
+    const url = buildApiUrl("/api/contracts/versions");
+    const authHeader = getAuthHeader();
+    if (!url || !authHeader) {
+      setError(missingConfigMessage);
+      return;
+    }
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`
+        Authorization: authHeader
       },
       body: JSON.stringify({ name, type, content, author: "ui-user" })
     });
@@ -34,11 +60,18 @@ export default function App() {
   async function generate() {
     if (!contractVersionId) return;
     setError("");
-    const response = await fetch("http://localhost:8080/api/generation-jobs", {
+    const url = buildApiUrl("/api/generation-jobs");
+    const authHeader = getAuthHeader();
+    if (!url || !authHeader) {
+      setError(missingConfigMessage);
+      return;
+    }
+
+    const response = await fetch(url, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Basic ${auth}`
+        Authorization: authHeader
       },
       body: JSON.stringify({ contractVersionId })
     });
@@ -54,18 +87,30 @@ export default function App() {
 
   async function refreshJob() {
     if (!jobId) return;
-    const response = await fetch(`http://localhost:8080/api/generation-jobs/${jobId}`, {
-      headers: { Authorization: `Basic ${auth}` }
-    });
+    setError("");
+    const url = buildApiUrl(`/api/generation-jobs/${jobId}`);
+    const authHeader = getAuthHeader();
+    if (!url || !authHeader) {
+      setError(missingConfigMessage);
+      return;
+    }
+
+    const response = await fetch(url, { headers: { Authorization: authHeader } });
     if (!response.ok) return;
     const body = await response.json();
     setJobStatus(body.status);
   }
 
   async function loadSummary() {
-    const response = await fetch("http://localhost:8080/api/read-model/summary", {
-      headers: { Authorization: `Basic ${auth}` }
-    });
+    setError("");
+    const url = buildApiUrl("/api/read-model/summary");
+    const authHeader = getAuthHeader();
+    if (!url || !authHeader) {
+      setError(missingConfigMessage);
+      return;
+    }
+
+    const response = await fetch(url, { headers: { Authorization: authHeader } });
     if (!response.ok) return;
     setSummary(await response.json());
   }

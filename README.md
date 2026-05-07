@@ -86,12 +86,20 @@ API default URL: `http://localhost:8080`
 ### 3) Run Frontend
 
 ```bash
+cp frontend/.env.example frontend/.env.local
 cd frontend
 npm install
 npm run dev
 ```
 
 UI default URL: `http://localhost:5173`
+
+Frontend requires env-based API configuration:
+
+- `VITE_API_BASE_URL` (example: `http://localhost:8080`)
+- `VITE_API_USERNAME`
+- `VITE_API_PASSWORD`
+- `VITE_DEV_SERVER_PORT` (optional, default `5173`)
 
 ## API Overview
 
@@ -163,6 +171,10 @@ Key environment variables:
 - Generation coordinates:
   - `GEN_OPENAPI_GROUP_ID`, `GEN_OPENAPI_ARTIFACT_SUFFIX`
   - `GEN_ASYNCAPI_GROUP_ID`, `GEN_ASYNCAPI_ARTIFACT_SUFFIX`
+- Frontend (Vite):
+  - `VITE_API_BASE_URL`
+  - `VITE_API_USERNAME`, `VITE_API_PASSWORD`
+  - `VITE_DEV_SERVER_PORT`
 
 ## Testing
 
@@ -183,6 +195,6 @@ The compatibility regression suite includes matrix scenarios for both
 
 ## Notes
 
-- Current frontend is demo-oriented and uses hardcoded API URL/credentials.
+- Frontend reads API URL/auth from `VITE_*` env variables.
 - Security users are currently in-memory (development profile style).
 - The project is actively evolving according to `VKR-backlog.md`.
