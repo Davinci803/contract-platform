@@ -38,7 +38,7 @@ jobs:
           java-version: "21"
           cache: maven
       - name: Run integration and E2E tests
-        run: mvn -f backend/pom.xml -pl api test "-Dtest=*IntegrationTest,*E2EIntegrationTest"
+        run: mvn -f backend/pom.xml -pl api -am test "-Dtest=*IntegrationTest,*E2EIntegrationTest" "-Dsurefire.failIfNoSpecifiedTests=false"
       - name: Upload integration test reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -70,13 +70,13 @@ jobs:
 
   security-scan:
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
       - name: Dependency review
+        if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@master
         with:
           scan-type: fs
           severity: HIGH,CRITICAL

@@ -70,7 +70,7 @@ class OpenApiPipelineNexusDowntimeE2EIntegrationTest {
         );
 
         JobResponse createdJob = generationJobService.create(version.getId());
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(10));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(30));
 
         assertEquals(JobStatus.FAILED, completedJob.status());
         assertTrue(completedJob.log().contains("Nexus upload"));

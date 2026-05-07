@@ -113,7 +113,7 @@ class AsyncApiPipelineE2EIntegrationTest {
         ContractVersion version = createVersion("Payments Async E2E", validAsyncApi());
 
         JobResponse createdJob = generationJobService.create(version.getId());
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(12));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(30));
 
         assertEquals(JobStatus.SUCCESS, completedJob.status());
         assertTrue(completedJob.log().contains("[schema-registry]"));

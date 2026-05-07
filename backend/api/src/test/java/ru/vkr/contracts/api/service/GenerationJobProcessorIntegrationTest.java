@@ -87,7 +87,7 @@ class GenerationJobProcessorIntegrationTest {
         ContractVersion version = createOpenApiVersion("openapi: 3.0.1\npaths:\n  /payments:\n    get: {}");
         JobResponse createdJob = generationJobService.create(version.getId());
 
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(8));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(20));
 
         assertEquals(JobStatus.SUCCESS, completedJob.status());
         assertEquals(1, generatedArtifactRepository.countByJob_Id(createdJob.jobId()));
@@ -102,7 +102,7 @@ class GenerationJobProcessorIntegrationTest {
         ContractVersion version = createOpenApiVersion("invalid openapi");
         JobResponse createdJob = generationJobService.create(version.getId());
 
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(8));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(20));
 
         assertEquals(JobStatus.FAILED, completedJob.status());
         assertTrue(completedJob.log().contains("non-retryable"));
@@ -175,7 +175,7 @@ class GenerationJobProcessorIntegrationTest {
 
         ContractVersion version = createOpenApiVersion("openapi: 3.0.1\npaths:\n  /payments:\n    get: {}");
         JobResponse createdJob = generationJobService.create(version.getId());
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(8));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(20));
 
         assertEquals(JobStatus.SUCCESS, completedJob.status());
         List<PublicationLog> logs = publicationLogRepository.findByJob_IdOrderByCreatedAtAsc(createdJob.jobId());

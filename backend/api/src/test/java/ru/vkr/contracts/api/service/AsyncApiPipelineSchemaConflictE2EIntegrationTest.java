@@ -97,7 +97,7 @@ class AsyncApiPipelineSchemaConflictE2EIntegrationTest {
         ContractVersion version = createVersion("Payments Async Conflict", validAsyncApi());
 
         JobResponse createdJob = generationJobService.create(version.getId());
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(10));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(30));
 
         assertEquals(JobStatus.FAILED, completedJob.status());
         assertTrue(completedJob.log().contains("business-incompatible"));

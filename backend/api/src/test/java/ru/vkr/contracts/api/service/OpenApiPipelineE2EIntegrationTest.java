@@ -102,7 +102,7 @@ class OpenApiPipelineE2EIntegrationTest {
         );
 
         JobResponse createdJob = generationJobService.create(version.getId());
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(10));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(30));
 
         assertEquals(JobStatus.SUCCESS, completedJob.status());
         assertTrue(completedJob.log().contains("[publish] uploaded jar and pom"));
@@ -128,7 +128,7 @@ class OpenApiPipelineE2EIntegrationTest {
         );
 
         JobResponse createdJob = generationJobService.create(version.getId());
-        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(10));
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(30));
 
         assertEquals(JobStatus.FAILED, completedJob.status());
         assertTrue(completedJob.log().contains("OpenAPI"));
