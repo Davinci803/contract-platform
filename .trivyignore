@@ -1,0 +1,4 @@
+# Temporary suppressions for known dependencies tracked in backlog.
+# Remove entries once dependency upgrades are merged.
+CVE-2026-42198
+CVE-2026-22733

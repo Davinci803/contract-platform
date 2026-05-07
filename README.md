@@ -49,7 +49,7 @@ asynchronous generation jobs, and stores publication/reporting artifacts.
   - `worker/` generation + compatibility engines
   - `api/` REST API, persistence, async job orchestration
 - `frontend/` demo web UI
-- `infra/` local docker-compose stack (Postgres, Kafka, Schema Registry, Nexus)
+- `infra/` docker-compose stack (infra + app services)
 - `docs/` project/VKR documentation
 - `templates/` generation templates
 
@@ -74,8 +74,30 @@ Services:
 - Kafka (Redpanda): `localhost:9092`
 - Schema Registry proxy: `http://localhost:8085`
 - Nexus: `http://localhost:8081`
+- API: `http://localhost:8080`
+- UI: `http://localhost:5173`
+
+### 1a) Single-command containerized startup (recommended)
+
+```bash
+docker compose -f infra/docker-compose.yml up -d --build
+```
+
+Smoke checks:
+
+```bash
+curl http://localhost:8080/actuator/health
+curl -I http://localhost:5173
+```
+
+Expected:
+
+- API health returns `{"status":"UP"}`.
+- Frontend responds with `200 OK`.
 
 ### 2) Run Backend API
+
+Skip this step if you started `api` via docker-compose.
 
 ```bash
 mvn -f backend/pom.xml -pl api spring-boot:run
@@ -84,6 +106,8 @@ mvn -f backend/pom.xml -pl api spring-boot:run
 API default URL: `http://localhost:8080`
 
 ### 3) Run Frontend
+
+Skip this step if you started `frontend` via docker-compose.
 
 ```bash
 cp frontend/.env.example frontend/.env.local
