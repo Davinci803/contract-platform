@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Panel from "../components/Panel";
 import { getContractHistory, listContracts, uploadContractVersion } from "../api";
 
@@ -24,24 +24,12 @@ export default function ContractsPage({
   const [historyState, setHistoryState] = useState({ loading: false, error: "" });
   const [uploadState, setUploadState] = useState({ loading: false, error: "" });
 
-  useEffect(() => {
-    loadContracts();
-  }, []);
-
-  useEffect(() => {
-    if (!selectedContractId) {
-      setHistory([]);
-      return;
-    }
-    loadHistory(selectedContractId);
-  }, [selectedContractId]);
-
   function onTypeChange(nextType) {
     setType(nextType);
     setContent(nextType === "OPENAPI" ? OPENAPI_SAMPLE : ASYNCAPI_SAMPLE);
   }
 
-  async function loadContracts() {
+  const loadContracts = useCallback(async () => {
     setListState({ loading: true, error: "" });
     try {
       const data = await listContracts();
@@ -51,9 +39,10 @@ export default function ContractsPage({
       return;
     }
     setListState({ loading: false, error: "" });
-  }
+  }, []);
 
-  async function loadHistory(contractId) {
+  const loadHistory = useCallback(
+    async (contractId) => {
     setHistoryState({ loading: true, error: "" });
     try {
       const data = await getContractHistory(contractId);
@@ -66,7 +55,21 @@ export default function ContractsPage({
       return;
     }
     setHistoryState({ loading: false, error: "" });
-  }
+    },
+    [onSelectVersion]
+  );
+
+  useEffect(() => {
+    loadContracts();
+  }, [loadContracts]);
+
+  useEffect(() => {
+    if (!selectedContractId) {
+      setHistory([]);
+      return;
+    }
+    loadHistory(selectedContractId);
+  }, [selectedContractId, loadHistory]);
 
   async function upload() {
     setUploadState({ loading: true, error: "" });
