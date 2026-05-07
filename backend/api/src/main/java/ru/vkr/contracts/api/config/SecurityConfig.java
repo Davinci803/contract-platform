@@ -19,6 +19,11 @@ import org.springframework.beans.factory.annotation.Value;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+    private final SecurityExceptionHandlers securityExceptionHandlers;
+
+    public SecurityConfig(SecurityExceptionHandlers securityExceptionHandlers) {
+        this.securityExceptionHandlers = securityExceptionHandlers;
+    }
 
     @Value("${security.users.admin.username}")
     private String adminUsername;
@@ -45,7 +50,11 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .requiresChannel(channel -> channel.anyRequest().requiresSecure())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(securityExceptionHandlers)
+                        .accessDeniedHandler(securityExceptionHandlers))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/actuator/info").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/contracts/versions", "/api/generation-jobs")
@@ -64,7 +73,11 @@ public class SecurityConfig {
         return http
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(securityExceptionHandlers)
+                        .accessDeniedHandler(securityExceptionHandlers))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/contracts/versions", "/api/generation-jobs")
                         .hasAnyRole("ADMIN", "DEVELOPER")

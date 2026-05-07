@@ -5,22 +5,38 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import ru.vkr.contracts.api.dto.ApiErrorResponse;
 
-import java.util.Map;
+import jakarta.servlet.http.HttpServletRequest;
+import java.time.Instant;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> badRequest(IllegalArgumentException e) {
-        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    public ResponseEntity<ApiErrorResponse> badRequest(IllegalArgumentException e, HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, e.getMessage(), request.getRequestURI());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<Map<String, String>> validation(MethodArgumentNotValidException e) {
+    public ResponseEntity<ApiErrorResponse> validation(MethodArgumentNotValidException e, HttpServletRequest request) {
         String message = e.getBindingResult().getFieldErrors().stream()
                 .findFirst()
                 .map(err -> err.getField() + ": " + err.getDefaultMessage())
                 .orElse("Validation failed");
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(Map.of("error", message));
+        return build(HttpStatus.UNPROCESSABLE_ENTITY, message, request.getRequestURI());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public ResponseEntity<ApiErrorResponse> unexpected(Exception e, HttpServletRequest request) {
+        return build(HttpStatus.INTERNAL_SERVER_ERROR, "Internal server error", request.getRequestURI());
+    }
+
+    private ResponseEntity<ApiErrorResponse> build(HttpStatus status, String message, String path) {
+        return ResponseEntity.status(status).body(new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                message,
+                path
+        ));
     }
 }

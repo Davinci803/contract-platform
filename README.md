@@ -159,6 +159,11 @@ Credentials are loaded from environment variables in backend config:
 - `GET /api/read-model/publication-logs`
   - list recent pipeline/publication events
 
+### API documentation
+
+- OpenAPI JSON: `http://localhost:8080/v3/api-docs`
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+
 ## Quick API Example
 
 ```bash
@@ -183,6 +188,31 @@ curl -u developer:dev123 -X POST http://localhost:8080/api/generation-jobs \
 ```bash
 # 3) Check job status (replace JOB_ID)
 curl -u developer:dev123 http://localhost:8080/api/generation-jobs/JOB_ID
+```
+
+### Example responses
+
+Successful upload (`201 Created`):
+
+```json
+{
+  "contractId": 1,
+  "contractName": "Payment Contract",
+  "contractType": "OPENAPI",
+  "contractVersionId": 10,
+  "version": "1.0.0"
+}
+```
+
+Unified error response (`4xx/5xx`):
+
+```json
+{
+  "timestamp": "2026-05-07T20:25:41.443Z",
+  "status": 400,
+  "error": "Contract version not found: 999999",
+  "path": "/api/generation-jobs"
+}
 ```
 
 ## Configuration
