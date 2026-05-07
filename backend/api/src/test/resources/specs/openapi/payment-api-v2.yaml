@@ -1,0 +1,28 @@
+openapi: 3.0.1
+info:
+  title: Payment API
+  version: 1.1.0
+paths:
+  /api/pay:
+    get:
+      operationId: getPayment
+      responses:
+        "200":
+          description: ok
+  /api/refund:
+    post:
+      operationId: createRefund
+      responses:
+        "202":
+          description: accepted
+components:
+  schemas:
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
+        status:
+          type: string

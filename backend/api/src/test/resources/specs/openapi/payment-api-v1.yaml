@@ -1,0 +1,20 @@
+openapi: 3.0.1
+info:
+  title: Payment API
+  version: 1.0.0
+paths:
+  /api/pay:
+    get:
+      operationId: getPayment
+      responses:
+        "200":
+          description: ok
+components:
+  schemas:
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+        amount:
+          type: number
