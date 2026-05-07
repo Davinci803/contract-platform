@@ -1,0 +1,11 @@
+security:
+  users:
+    admin:
+      username: ${SECURITY_ADMIN_USERNAME:admin}
+      password: ${SECURITY_ADMIN_PASSWORD:admin123}
+    developer:
+      username: ${SECURITY_DEVELOPER_USERNAME:developer}
+      password: ${SECURITY_DEVELOPER_PASSWORD:dev123}
+    viewer:
+      username: ${SECURITY_VIEWER_USERNAME:viewer}
+      password: ${SECURITY_VIEWER_PASSWORD:view123}

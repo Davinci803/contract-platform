@@ -1,6 +1,8 @@
 spring:
   application:
     name: contract-platform-api
+  profiles:
+    default: dev
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/contracts}
     username: ${DB_USER:contracts}
@@ -32,6 +34,18 @@ logging:
   level:
     root: INFO
     ru.vkr.contracts: INFO
+
+security:
+  users:
+    admin:
+      username: ${SECURITY_ADMIN_USERNAME}
+      password: ${SECURITY_ADMIN_PASSWORD}
+    developer:
+      username: ${SECURITY_DEVELOPER_USERNAME}
+      password: ${SECURITY_DEVELOPER_PASSWORD}
+    viewer:
+      username: ${SECURITY_VIEWER_USERNAME}
+      password: ${SECURITY_VIEWER_PASSWORD}
 
 generation:
   jobs:

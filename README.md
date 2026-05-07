@@ -105,11 +105,14 @@ Frontend requires env-based API configuration:
 
 All `/api/**` endpoints require HTTP Basic authentication.
 
-### Default local users
+### Local users (dev profile defaults)
 
 - `admin / admin123`
 - `developer / dev123`
 - `viewer / view123`
+
+Credentials are loaded from environment variables in backend config:
+`SECURITY_ADMIN_*`, `SECURITY_DEVELOPER_*`, `SECURITY_VIEWER_*`.
 
 ### Endpoints
 
@@ -171,10 +174,19 @@ Key environment variables:
 - Generation coordinates:
   - `GEN_OPENAPI_GROUP_ID`, `GEN_OPENAPI_ARTIFACT_SUFFIX`
   - `GEN_ASYNCAPI_GROUP_ID`, `GEN_ASYNCAPI_ARTIFACT_SUFFIX`
+- Security users:
+  - `SECURITY_ADMIN_USERNAME`, `SECURITY_ADMIN_PASSWORD`
+  - `SECURITY_DEVELOPER_USERNAME`, `SECURITY_DEVELOPER_PASSWORD`
+  - `SECURITY_VIEWER_USERNAME`, `SECURITY_VIEWER_PASSWORD`
 - Frontend (Vite):
   - `VITE_API_BASE_URL`
   - `VITE_API_USERNAME`, `VITE_API_PASSWORD`
   - `VITE_DEV_SERVER_PORT`
+
+Security policy by profile:
+
+- non-`prod`: health/info are public, API is role-protected.
+- `prod`: HTTPS is required, `/actuator/info` is admin-only, API keeps role restrictions.
 
 ## Testing
 
@@ -196,5 +208,5 @@ The compatibility regression suite includes matrix scenarios for both
 ## Notes
 
 - Frontend reads API URL/auth from `VITE_*` env variables.
-- Security users are currently in-memory (development profile style).
+- Security users are in-memory, but loaded from env/profile config.
 - The project is actively evolving according to `VKR-backlog.md`.

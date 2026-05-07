@@ -1,0 +1,17 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+security:
+  users:
+    admin:
+      username: ${SECURITY_ADMIN_USERNAME}
+      password: ${SECURITY_ADMIN_PASSWORD}
+    developer:
+      username: ${SECURITY_DEVELOPER_USERNAME}
+      password: ${SECURITY_DEVELOPER_PASSWORD}
+    viewer:
+      username: ${SECURITY_VIEWER_USERNAME}
+      password: ${SECURITY_VIEWER_PASSWORD}

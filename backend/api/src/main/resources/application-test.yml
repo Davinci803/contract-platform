@@ -8,3 +8,15 @@ spring:
       ddl-auto: validate
   flyway:
     enabled: true
+
+security:
+  users:
+    admin:
+      username: admin
+      password: admin123
+    developer:
+      username: developer
+      password: dev123
+    viewer:
+      username: viewer
+      password: view123

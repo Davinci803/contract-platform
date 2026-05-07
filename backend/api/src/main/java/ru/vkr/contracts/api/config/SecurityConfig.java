@@ -2,35 +2,104 @@ package ru.vkr.contracts.api.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.provisioning.InMemoryUserDetailsManager;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.beans.factory.annotation.Value;
 
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    @Value("${security.users.admin.username}")
+    private String adminUsername;
+
+    @Value("${security.users.admin.password}")
+    private String adminPassword;
+
+    @Value("${security.users.developer.username}")
+    private String developerUsername;
+
+    @Value("${security.users.developer.password}")
+    private String developerPassword;
+
+    @Value("${security.users.viewer.username}")
+    private String viewerUsername;
+
+    @Value("${security.users.viewer.password}")
+    private String viewerPassword;
+
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    @Profile("prod")
+    public SecurityFilterChain productionSecurityFilterChain(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .requiresChannel(channel -> channel.anyRequest().requiresSecure())
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/api/**").authenticated()
-                        .anyRequest().permitAll())
+                        .requestMatchers("/actuator/health").permitAll()
+                        .requestMatchers("/actuator/info").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/contracts/versions", "/api/generation-jobs")
+                        .hasAnyRole("ADMIN", "DEVELOPER")
+                        .requestMatchers(HttpMethod.GET, "/api/**")
+                        .hasAnyRole("ADMIN", "DEVELOPER", "VIEWER")
+                        .requestMatchers("/api/**").hasRole("ADMIN")
+                        .anyRequest().denyAll())
                 .httpBasic(basic -> {})
                 .build();
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
+    @Profile("!prod")
+    public SecurityFilterChain nonProdSecurityFilterChain(HttpSecurity http) throws Exception {
+        return http
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/actuator/health", "/actuator/info").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/contracts/versions", "/api/generation-jobs")
+                        .hasAnyRole("ADMIN", "DEVELOPER")
+                        .requestMatchers(HttpMethod.GET, "/api/**")
+                        .hasAnyRole("ADMIN", "DEVELOPER", "VIEWER")
+                        .requestMatchers("/api/**").hasRole("ADMIN")
+                        .anyRequest().denyAll())
+                .httpBasic(basic -> {})
+                .build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
+    }
+
+    @Bean
+    public UserDetailsService userDetailsService(PasswordEncoder passwordEncoder) {
         return new InMemoryUserDetailsManager(
-                User.withUsername("admin").password("{noop}admin123").roles("ADMIN").build(),
-                User.withUsername("developer").password("{noop}dev123").roles("DEVELOPER").build(),
-                User.withUsername("viewer").password("{noop}view123").roles("VIEWER").build()
+                createUser(adminUsername, adminPassword, "ADMIN", passwordEncoder),
+                createUser(developerUsername, developerPassword, "DEVELOPER", passwordEncoder),
+                createUser(viewerUsername, viewerPassword, "VIEWER", passwordEncoder)
         );
+    }
+
+    private UserDetails createUser(String username, String password, String role, PasswordEncoder passwordEncoder) {
+        if (username == null || username.isBlank()) {
+            throw new IllegalStateException("security.users." + role.toLowerCase() + ".username must be configured");
+        }
+        if (password == null || password.isBlank()) {
+            throw new IllegalStateException("security.users." + role.toLowerCase() + ".password must be configured");
+        }
+        return User.withUsername(username)
+                .password(passwordEncoder.encode(password))
+                .roles(role)
+                .build();
     }
 }
