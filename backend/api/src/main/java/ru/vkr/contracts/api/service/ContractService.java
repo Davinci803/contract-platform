@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.vkr.contracts.api.domain.ContractVersion;
 import ru.vkr.contracts.api.domain.EntityContract;
+import ru.vkr.contracts.api.dto.ContractSummaryResponse;
 import ru.vkr.contracts.api.dto.ContractVersionResponse;
 import ru.vkr.contracts.api.repo.ContractRepository;
 import ru.vkr.contracts.api.repo.ContractVersionRepository;
@@ -49,6 +50,17 @@ public class ContractService {
                 created.getId(),
                 created.getVersion()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<ContractSummaryResponse> listContracts() {
+        return contractRepository.findAllByOrderByIdDesc().stream()
+                .map(contract -> new ContractSummaryResponse(
+                        contract.getId(),
+                        contract.getName(),
+                        contract.getType()
+                ))
+                .toList();
     }
 
     @Transactional(readOnly = true)

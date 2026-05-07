@@ -1,159 +1,61 @@
-import { useState } from "react";
-
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
-const API_USERNAME = (import.meta.env.VITE_API_USERNAME ?? "").trim();
-const API_PASSWORD = import.meta.env.VITE_API_PASSWORD ?? "";
-
-const missingConfigMessage =
-  "Frontend env is not configured. Set VITE_API_BASE_URL, VITE_API_USERNAME and VITE_API_PASSWORD.";
-
-function getAuthHeader() {
-  if (!API_USERNAME || !API_PASSWORD) {
-    return null;
-  }
-  return `Basic ${btoa(`${API_USERNAME}:${API_PASSWORD}`)}`;
-}
-
-function buildApiUrl(path) {
-  if (!API_BASE_URL) {
-    return null;
-  }
-  return `${API_BASE_URL}${path}`;
-}
+import { useMemo, useState } from "react";
+import ArtifactsPage from "./pages/ArtifactsPage";
+import CompatibilityPage from "./pages/CompatibilityPage";
+import ContractsPage from "./pages/ContractsPage";
+import JobsPage from "./pages/JobsPage";
 
 export default function App() {
-  const [name, setName] = useState("Payment Contract");
-  const [type, setType] = useState("OPENAPI");
-  const [content, setContent] = useState("openapi: 3.0.1\npaths:\n  /api/pay:\n    get: {}");
-  const [contractVersionId, setContractVersionId] = useState(null);
-  const [jobId, setJobId] = useState(null);
-  const [jobStatus, setJobStatus] = useState("N/A");
-  const [summary, setSummary] = useState(null);
-  const [error, setError] = useState("");
+  const [activeTab, setActiveTab] = useState("contracts");
+  const [selectedContractId, setSelectedContractId] = useState("");
+  const [selectedContractVersionId, setSelectedContractVersionId] = useState("");
+  const [currentJob, setCurrentJob] = useState(null);
 
-  async function upload() {
-    setError("");
-    const url = buildApiUrl("/api/contracts/versions");
-    const authHeader = getAuthHeader();
-    if (!url || !authHeader) {
-      setError(missingConfigMessage);
-      return;
-    }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader
-      },
-      body: JSON.stringify({ name, type, content, author: "ui-user" })
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      setError(body.error || `Upload failed: ${response.status}`);
-      return;
-    }
-    const body = await response.json();
-    setContractVersionId(body.contractVersionId);
-  }
-
-  async function generate() {
-    if (!contractVersionId) return;
-    setError("");
-    const url = buildApiUrl("/api/generation-jobs");
-    const authHeader = getAuthHeader();
-    if (!url || !authHeader) {
-      setError(missingConfigMessage);
-      return;
-    }
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: authHeader
-      },
-      body: JSON.stringify({ contractVersionId })
-    });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({}));
-      setError(body.error || `Generation failed: ${response.status}`);
-      return;
-    }
-    const body = await response.json();
-    setJobId(body.jobId);
-    setJobStatus(body.status);
-  }
-
-  async function refreshJob() {
-    if (!jobId) return;
-    setError("");
-    const url = buildApiUrl(`/api/generation-jobs/${jobId}`);
-    const authHeader = getAuthHeader();
-    if (!url || !authHeader) {
-      setError(missingConfigMessage);
-      return;
-    }
-
-    const response = await fetch(url, { headers: { Authorization: authHeader } });
-    if (!response.ok) return;
-    const body = await response.json();
-    setJobStatus(body.status);
-  }
-
-  async function loadSummary() {
-    setError("");
-    const url = buildApiUrl("/api/read-model/summary");
-    const authHeader = getAuthHeader();
-    if (!url || !authHeader) {
-      setError(missingConfigMessage);
-      return;
-    }
-
-    const response = await fetch(url, { headers: { Authorization: authHeader } });
-    if (!response.ok) return;
-    setSummary(await response.json());
-  }
+  const tabs = useMemo(
+    () => [
+      { id: "contracts", label: "Contracts & Versions" },
+      { id: "jobs", label: "Generation Job" },
+      { id: "compatibility", label: "Compatibility" },
+      { id: "artifacts", label: "Artifacts & Publications" }
+    ],
+    []
+  );
 
   return (
     <main>
-      <h1>Contract Platform Demo</h1>
-      <section>
-        <h2>Upload Contract Version</h2>
-        <label>
-          Name
-          <input value={name} onChange={(e) => setName(e.target.value)} />
-        </label>
-        <label>
-          Type
-          <select value={type} onChange={(e) => setType(e.target.value)}>
-            <option value="OPENAPI">OPENAPI</option>
-            <option value="ASYNCAPI">ASYNCAPI</option>
-          </select>
-        </label>
-        <label>
-          Specification
-          <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={12} />
-        </label>
-        <button onClick={upload}>Upload Version</button>
-        <p>contractVersionId: {contractVersionId ?? "-"}</p>
-      </section>
+      <h1>Contract Platform UI Flow</h1>
+      <p className="muted">
+        End-to-end demo: contracts, version history, compatibility advice, job timeline, and
+        publication artifacts.
+      </p>
+      <nav className="tabs">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            className={activeTab === tab.id ? "tab active" : "tab"}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
 
-      <section>
-        <h2>Generate & Publish</h2>
-        <button onClick={generate} disabled={!contractVersionId}>Generate & Publish</button>
-        <button onClick={refreshJob} disabled={!jobId}>Refresh Job Status</button>
-        <p>jobId: {jobId ?? "-"}</p>
-        <p>jobStatus: {jobStatus}</p>
-      </section>
-
-      <section>
-        <h2>Artifacts Summary</h2>
-        <button onClick={loadSummary}>Load Summary</button>
-        <pre>{summary ? JSON.stringify(summary, null, 2) : "No summary loaded"}</pre>
-      </section>
-
-      {error && <p className="error">{error}</p>}
+      {activeTab === "contracts" && (
+        <ContractsPage
+          selectedContractId={selectedContractId}
+          selectedContractVersionId={selectedContractVersionId}
+          onSelectContract={setSelectedContractId}
+          onSelectVersion={setSelectedContractVersionId}
+        />
+      )}
+      {activeTab === "jobs" && (
+        <JobsPage
+          selectedContractVersionId={selectedContractVersionId}
+          currentJob={currentJob}
+          onJobUpdated={setCurrentJob}
+        />
+      )}
+      {activeTab === "compatibility" && <CompatibilityPage />}
+      {activeTab === "artifacts" && <ArtifactsPage />}
     </main>
   );
 }

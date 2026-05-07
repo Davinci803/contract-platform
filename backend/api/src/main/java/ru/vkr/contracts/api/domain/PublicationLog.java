@@ -76,6 +76,14 @@ public class PublicationLog {
         return target;
     }
 
+    public Long getId() {
+        return id;
+    }
+
+    public Long getJobId() {
+        return job.getId();
+    }
+
     public String getStatus() {
         return status;
     }

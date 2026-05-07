@@ -6,17 +6,29 @@ body {
 }
 
 main {
-  max-width: 960px;
+  max-width: 1080px;
   margin: 0 auto;
   padding: 24px;
 }
 
-section {
+.panel {
   background: #ffffff;
   border: 1px solid #e5e9f2;
   border-radius: 10px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.panel-actions {
+  display: flex;
+  gap: 8px;
 }
 
 label {
@@ -46,9 +58,155 @@ button {
   cursor: pointer;
 }
 
+.secondary {
+  border-color: #ccd5e7;
+  background: white;
+  color: #1d2530;
+}
+
 button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0;
+  flex-wrap: wrap;
+}
+
+.tab {
+  background: white;
+  color: #1d2530;
+  border-color: #d8dfef;
+}
+
+.tab.active {
+  background: #5f79d8;
+  color: white;
+  border-color: #5f79d8;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+}
+
+.card {
+  border: 1px solid #dde4f2;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fcfdff;
+}
+
+.button-card {
+  text-align: left;
+  color: inherit;
+  background: white;
+  border: 1px solid #dde4f2;
+}
+
+.button-card.selected {
+  border-color: #5f79d8;
+  box-shadow: 0 0 0 2px rgba(95, 121, 216, 0.18);
+}
+
+.muted {
+  color: #63708a;
+}
+
+.split {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.badge {
+  display: inline-block;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #d8dfef;
+  background: #f0f3fa;
+}
+
+.badge.ok {
+  background: #e6f6eb;
+  border-color: #9ed5ad;
+}
+
+.badge.warn {
+  background: #fff3dd;
+  border-color: #e2c27f;
+}
+
+.badge.err {
+  background: #fdeaea;
+  border-color: #e1a2a2;
+}
+
+.badge.info {
+  background: #e8f0ff;
+  border-color: #aabde9;
+}
+
+.timeline {
+  display: grid;
+  gap: 8px;
+}
+
+.timeline-step {
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid #d8dfef;
+  background: #f8faff;
+  font-weight: 600;
+}
+
+.timeline-step.active {
+  border-color: #5f79d8;
+}
+
+.timeline-step.done {
+  background: #e8f6ec;
+  border-color: #9ed5ad;
+}
+
+.timeline-step.failed {
+  background: #fdeaea;
+  border-color: #e1a2a2;
+}
+
+.mono {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: #111827;
+  color: #f9fafb;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 12px;
 }
 
 .error {

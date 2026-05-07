@@ -3,6 +3,7 @@ package ru.vkr.contracts.api.web;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import ru.vkr.contracts.api.dto.ContractSummaryResponse;
 import ru.vkr.contracts.api.dto.ContractVersionResponse;
 import ru.vkr.contracts.api.service.ContractService;
 import ru.vkr.contracts.shared.dto.ContractUploadRequest;
@@ -16,6 +17,11 @@ public class ContractController {
 
     public ContractController(ContractService contractService) {
         this.contractService = contractService;
+    }
+
+    @GetMapping
+    public List<ContractSummaryResponse> listContracts() {
+        return contractService.listContracts();
     }
 
     @PostMapping("/versions")

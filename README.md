@@ -118,6 +118,8 @@ Credentials are loaded from environment variables in backend config:
 
 - `POST /api/contracts/versions`
   - upload a contract version
+- `GET /api/contracts`
+  - list available contracts
 - `GET /api/contracts/{contractId}/versions`
   - list version history for a contract
 - `POST /api/generation-jobs`
@@ -128,6 +130,10 @@ Credentials are loaded from environment variables in backend config:
   - list compatibility reports
 - `GET /api/read-model/summary`
   - get simple counters (`artifacts`, `publicationLogs`)
+- `GET /api/read-model/artifacts`
+  - list latest generated artifacts with coordinates/publication URLs
+- `GET /api/read-model/publication-logs`
+  - list recent pipeline/publication events
 
 ## Quick API Example
 

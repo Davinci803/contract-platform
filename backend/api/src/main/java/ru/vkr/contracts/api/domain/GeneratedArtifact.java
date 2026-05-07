@@ -41,4 +41,20 @@ public class GeneratedArtifact {
     public Long getId() {
         return id;
     }
+
+    public Long getJobId() {
+        return job.getId();
+    }
+
+    public String getCoordinates() {
+        return coordinates;
+    }
+
+    public String getPublicationUrl() {
+        return publicationUrl;
+    }
+
+    public String getSchemaSubject() {
+        return schemaSubject;
+    }
 }
