@@ -1,8 +1,10 @@
 package ru.vkr.contracts.api.service;
 
 import org.springframework.core.task.TaskRejectedException;
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.vkr.contracts.api.config.GenerationMetrics;
 import ru.vkr.contracts.api.domain.ContractVersion;
 import ru.vkr.contracts.api.domain.GenerationJob;
 import ru.vkr.contracts.api.domain.PublicationLog;
@@ -17,24 +19,28 @@ public class GenerationJobService {
     private final GenerationJobRepository generationJobRepository;
     private final PublicationLogRepository publicationLogRepository;
     private final GenerationJobProcessor generationJobProcessor;
+    private final GenerationMetrics generationMetrics;
 
     public GenerationJobService(
             ContractVersionRepository contractVersionRepository,
             GenerationJobRepository generationJobRepository,
             PublicationLogRepository publicationLogRepository,
-            GenerationJobProcessor generationJobProcessor
+            GenerationJobProcessor generationJobProcessor,
+            GenerationMetrics generationMetrics
     ) {
         this.contractVersionRepository = contractVersionRepository;
         this.generationJobRepository = generationJobRepository;
         this.publicationLogRepository = publicationLogRepository;
         this.generationJobProcessor = generationJobProcessor;
+        this.generationMetrics = generationMetrics;
     }
 
     @Transactional
     public JobResponse create(Long contractVersionId) {
         ContractVersion contractVersion = contractVersionRepository.findById(contractVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("Contract version not found: " + contractVersionId));
-        GenerationJob job = generationJobRepository.save(new GenerationJob(contractVersion));
+        String correlationId = MDC.get("correlationId");
+        GenerationJob job = generationJobRepository.save(new GenerationJob(contractVersion, correlationId));
         publicationLogRepository.save(new PublicationLog(
                 job,
                 "PIPELINE",
@@ -47,6 +53,7 @@ public class GenerationJobService {
             generationJobProcessor.processAsync(job.getId());
         } catch (TaskRejectedException e) {
             String message = "Generation queue is overloaded. Please retry later.";
+            generationMetrics.incrementRetryNeeded(contractVersion.getContract().getType(), "queue_rejected");
             publicationLogRepository.save(new PublicationLog(
                     job,
                     "PIPELINE",

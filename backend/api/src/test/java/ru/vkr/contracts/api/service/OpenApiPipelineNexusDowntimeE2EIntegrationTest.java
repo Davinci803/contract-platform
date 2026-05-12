@@ -75,7 +75,8 @@ class OpenApiPipelineNexusDowntimeE2EIntegrationTest {
         assertEquals(JobStatus.FAILED, completedJob.status());
         assertTrue(completedJob.log().contains("Nexus upload"));
         assertEquals(0, generatedArtifactRepository.countByJob_Id(createdJob.jobId()));
-        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "FAILED_NON_RETRYABLE"));
+        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "FAILED_RETRYABLE"));
+        assertEquals(2, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "RETRYING"));
     }
 
     private ContractVersion createVersion(String name, String content) {

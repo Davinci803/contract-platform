@@ -1,5 +1,8 @@
 package ru.vkr.contracts.worker.generation.core.publish;
 
+import ru.vkr.contracts.worker.generation.PermanentGenerationException;
+import ru.vkr.contracts.worker.generation.TransientGenerationException;
+
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -56,15 +59,24 @@ public class NexusPublisher {
                 requestBuilder.header("Authorization", "Basic " + token);
             }
             HttpResponse<String> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                throw new IllegalStateException("Nexus upload failed [" + response.statusCode() + "] for " + targetUrl + ": " + trim(response.body()));
+            int statusCode = response.statusCode();
+            if (statusCode < 200 || statusCode >= 300) {
+                String message = "Nexus upload failed [" + statusCode + "] for " + targetUrl + ": " + trim(response.body());
+                if (isTransientStatus(statusCode)) {
+                    throw new TransientGenerationException(message);
+                }
+                throw new PermanentGenerationException(message);
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Nexus upload I/O failure for " + targetUrl + ": " + e.getMessage(), e);
+            throw new TransientGenerationException("Nexus upload I/O failure for " + targetUrl + ": " + e.getMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException("Nexus upload interrupted for " + targetUrl, e);
+            throw new TransientGenerationException("Nexus upload interrupted for " + targetUrl, e);
         }
+    }
+
+    private boolean isTransientStatus(int statusCode) {
+        return statusCode == 408 || statusCode == 429 || statusCode >= 500;
     }
 
     private String stripTrailingSlash(String value) {

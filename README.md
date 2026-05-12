@@ -269,4 +269,5 @@ The compatibility regression suite includes matrix scenarios for both
 
 - Frontend reads API URL/auth from `VITE_*` env variables.
 - Security users are in-memory, but loaded from env/profile config.
+- Observability metrics/tracing guide: `docs/metrics.md`.
 - The project is actively evolving according to `VKR-backlog.md`.

@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import ru.vkr.contracts.worker.generation.PermanentGenerationException;
+import ru.vkr.contracts.worker.generation.TransientGenerationException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -78,17 +80,17 @@ public class AsyncApiSchemaRegistryClient {
             int id = root.path("id").asInt(-1);
             int version = root.path("version").asInt(-1);
             if (id < 0) {
-                throw new IllegalStateException("Schema Registry response missing id/version: " + trim(responseBody));
+                throw new PermanentGenerationException("Schema Registry response missing id/version: " + trim(responseBody));
             }
             if (version < 0) {
                 version = resolveVersion(subject, id, log);
             }
             if (version < 0) {
-                throw new IllegalStateException("Schema Registry response missing id/version: " + trim(responseBody));
+                throw new PermanentGenerationException("Schema Registry response missing id/version: " + trim(responseBody));
             }
             return new SchemaRegistration(id, version);
         } catch (JsonProcessingException e) {
-            throw new IllegalStateException("Schema Registry response parse failure: " + trim(responseBody), e);
+            throw new PermanentGenerationException("Schema Registry response parse failure: " + trim(responseBody), e);
         }
     }
 
@@ -99,10 +101,13 @@ public class AsyncApiSchemaRegistryClient {
                 .DELETE()
                 .build();
         HttpResponse<String> response = send(request, "Schema Registry delete");
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException(
-                    "Schema Registry delete failed [" + response.statusCode() + "] for subject " + subject + ": " + trim(response.body())
-            );
+        int statusCode = response.statusCode();
+        if (statusCode < 200 || statusCode >= 300) {
+            String message = "Schema Registry delete failed [" + statusCode + "] for subject " + subject + ": " + trim(response.body());
+            if (isTransientStatus(statusCode)) {
+                throw new TransientGenerationException(message);
+            }
+            throw new PermanentGenerationException(message);
         }
     }
 
@@ -121,10 +126,13 @@ public class AsyncApiSchemaRegistryClient {
                 .PUT(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
         HttpResponse<String> response = send(request, "Schema Registry compatibility update");
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException(
-                    "Schema Registry compatibility update failed [" + response.statusCode() + "]: " + trim(response.body())
-            );
+        int statusCode = response.statusCode();
+        if (statusCode < 200 || statusCode >= 300) {
+            String message = "Schema Registry compatibility update failed [" + statusCode + "]: " + trim(response.body());
+            if (isTransientStatus(statusCode)) {
+                throw new TransientGenerationException(message);
+            }
+            throw new PermanentGenerationException(message);
         }
     }
 
@@ -135,11 +143,16 @@ public class AsyncApiSchemaRegistryClient {
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
         HttpResponse<String> response = send(request, "Schema Registry register");
-        if (response.statusCode() == 409) {
-            throw new IllegalStateException("Schema Registry compatibility conflict: " + trim(response.body()));
+        int statusCode = response.statusCode();
+        if (statusCode == 409) {
+            throw new PermanentGenerationException("Schema Registry compatibility conflict: " + trim(response.body()));
         }
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("Schema Registry register failed [" + response.statusCode() + "]: " + trim(response.body()));
+        if (statusCode < 200 || statusCode >= 300) {
+            String message = "Schema Registry register failed [" + statusCode + "]: " + trim(response.body());
+            if (isTransientStatus(statusCode)) {
+                throw new TransientGenerationException(message);
+            }
+            throw new PermanentGenerationException(message);
         }
         return response.body();
     }
@@ -183,10 +196,10 @@ public class AsyncApiSchemaRegistryClient {
         try {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         } catch (IOException e) {
-            throw new IllegalStateException(operationLabel + " I/O failure: " + e.getMessage(), e);
+            throw new TransientGenerationException(operationLabel + " I/O failure: " + e.getMessage(), e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new IllegalStateException(operationLabel + " interrupted", e);
+            throw new TransientGenerationException(operationLabel + " interrupted", e);
         }
     }
 
@@ -211,6 +224,10 @@ public class AsyncApiSchemaRegistryClient {
         }
         String compact = value.replaceAll("\\s+", " ").trim();
         return compact.length() > 240 ? compact.substring(0, 240) + "..." : compact;
+    }
+
+    private boolean isTransientStatus(int statusCode) {
+        return statusCode == 408 || statusCode == 429 || statusCode >= 500;
     }
 
     private void appendStage(StringBuilder log, String stage, String message) {

@@ -1,9 +1,13 @@
 package ru.vkr.contracts.api.service;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import ru.vkr.contracts.api.config.GenerationMetrics;
 import ru.vkr.contracts.api.domain.GenerationJob;
 import ru.vkr.contracts.api.domain.PublicationLog;
 import ru.vkr.contracts.api.repo.GenerationJobRepository;
@@ -15,19 +19,24 @@ import java.util.List;
 
 @Component
 public class GenerationJobRecoveryService {
+    private static final Logger log = LoggerFactory.getLogger(GenerationJobRecoveryService.class);
+
     private final GenerationJobRepository generationJobRepository;
     private final PublicationLogRepository publicationLogRepository;
+    private final GenerationMetrics generationMetrics;
     private final boolean recoveryEnabled;
     private final long staleThresholdMs;
 
     public GenerationJobRecoveryService(
             GenerationJobRepository generationJobRepository,
             PublicationLogRepository publicationLogRepository,
+            GenerationMetrics generationMetrics,
             @Value("${generation.jobs.recovery.enabled:true}") boolean recoveryEnabled,
             @Value("${generation.jobs.recovery.stale-threshold-ms:600000}") long staleThresholdMs
     ) {
         this.generationJobRepository = generationJobRepository;
         this.publicationLogRepository = publicationLogRepository;
+        this.generationMetrics = generationMetrics;
         this.recoveryEnabled = recoveryEnabled;
         this.staleThresholdMs = staleThresholdMs;
     }
@@ -42,16 +51,23 @@ public class GenerationJobRecoveryService {
         Instant staleBefore = Instant.now().minusMillis(staleThresholdMs);
         List<GenerationJob> staleRunningJobs = generationJobRepository.findByStatusAndUpdatedAtBefore(JobStatus.RUNNING, staleBefore);
         for (GenerationJob job : staleRunningJobs) {
-            String message = "Generation watchdog marked stale RUNNING job as FAILED after timeout.";
-            publicationLogRepository.save(new PublicationLog(
-                    job,
-                    "RECOVERY",
-                    "FAILED_NON_RETRYABLE",
-                    "event=watchdog-timeout; message=" + message,
-                    "WATCHDOG_TIMEOUT",
-                    PublicationLog.ERROR_CATEGORY_TECHNICAL
-            ));
-            job.markFailed(message);
+            MDC.put("correlationId", job.getCorrelationId());
+            try {
+                String message = "Generation watchdog marked stale RUNNING job as FAILED after timeout.";
+                publicationLogRepository.save(new PublicationLog(
+                        job,
+                        "RECOVERY",
+                        "FAILED_NON_RETRYABLE",
+                        "event=watchdog-timeout; message=" + message,
+                        "WATCHDOG_TIMEOUT",
+                        PublicationLog.ERROR_CATEGORY_TECHNICAL
+                ));
+                job.markFailed(message);
+                generationMetrics.incrementRetryNeeded(job.getContractVersion().getContract().getType(), "watchdog_timeout");
+                log.warn("Watchdog marked stale job as failed: jobId={} correlationId={}", job.getId(), job.getCorrelationId());
+            } finally {
+                MDC.remove("correlationId");
+            }
         }
     }
 }

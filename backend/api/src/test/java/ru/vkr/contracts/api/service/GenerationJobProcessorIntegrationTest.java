@@ -20,6 +20,7 @@ import ru.vkr.contracts.api.repo.GenerationJobRepository;
 import ru.vkr.contracts.api.repo.PublicationLogRepository;
 import ru.vkr.contracts.shared.model.ContractType;
 import ru.vkr.contracts.shared.model.JobStatus;
+import ru.vkr.contracts.worker.generation.TransientGenerationException;
 import ru.vkr.contracts.worker.generation.openapi.OpenApiPipeline;
 import ru.vkr.contracts.worker.generation.model.GenerationResult;
 
@@ -135,6 +136,31 @@ class GenerationJobProcessorIntegrationTest {
         assertEquals(JobStatus.SUCCESS, finalState.status());
         assertEquals(1, generatedArtifactRepository.countByJob_Id(job.getId()));
         assertEquals(1, publicationLogRepository.countByJob_IdAndTargetAndStatus(job.getId(), "NEXUS", "SUCCESS"));
+    }
+
+    @Test
+    void shouldRetryTransientPipelineFailureAndEventuallySucceed() {
+        when(openApiPipeline.generateAndPublish(anyString(), anyString(), anyString(), nullable(String.class)))
+                .thenThrow(new TransientGenerationException("Nexus upload failed [503]"))
+                .thenReturn(new GenerationResult(
+                        "ru.vkr.contracts.generated",
+                        "payment-api-rest-client",
+                        "1.0.0",
+                        "ru.vkr.contracts.generated:payment-api-rest-client:1.0.0",
+                        "http://localhost:8081/repository/maven-releases/payment-api-rest-client/1.0.0",
+                        null,
+                        "Pipeline completed successfully"
+                ));
+
+        ContractVersion version = createOpenApiVersion("openapi: 3.0.1\npaths:\n  /payments:\n    get: {}");
+        JobResponse createdJob = generationJobService.create(version.getId());
+        JobResponse completedJob = awaitTerminalStatus(createdJob.jobId(), Duration.ofSeconds(20));
+
+        assertEquals(JobStatus.SUCCESS, completedJob.status());
+        assertEquals(1, publicationLogRepository.countByJob_IdAndStatus(createdJob.jobId(), "RETRYING"));
+        assertTrue(publicationLogRepository.findByJob_IdOrderByCreatedAtAsc(createdJob.jobId())
+                .stream()
+                .anyMatch(log -> "PIPELINE_RETRY_SCHEDULED".equals(log.getEventType())));
     }
 
     @Test

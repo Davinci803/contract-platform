@@ -37,11 +37,17 @@ public class GenerationJob {
     }
 
     public GenerationJob(ContractVersion contractVersion) {
+        this(contractVersion, UUID.randomUUID().toString());
+    }
+
+    public GenerationJob(ContractVersion contractVersion, String correlationId) {
         this.contractVersion = contractVersion;
         this.status = JobStatus.PENDING;
         this.createdAt = Instant.now();
         this.updatedAt = this.createdAt;
-        this.correlationId = UUID.randomUUID().toString();
+        this.correlationId = correlationId == null || correlationId.isBlank()
+                ? UUID.randomUUID().toString()
+                : correlationId;
     }
 
     public Long getId() {
