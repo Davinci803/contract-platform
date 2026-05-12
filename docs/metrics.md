@@ -89,3 +89,51 @@ order by created_at asc;
 ```
 
 This gives a full chain from request to background pipeline to persisted audit trail.
+
+## Metric-to-Artifact Mapping
+
+- `generation.pipeline.duration`
+  - Produced by: `backend/api/src/main/java/ru/vkr/contracts/api/config/GenerationMetrics.java`
+  - Recorded in: `backend/api/src/main/java/ru/vkr/contracts/api/service/GenerationJobProcessor.java`
+  - Demo verification: `GET /actuator/metrics/generation.pipeline.duration`
+- `generation.pipeline.outcome.total`
+  - Produced by: `GenerationMetrics.incrementPipelineOutcome(...)`
+  - Source events: terminal job outcomes in `GenerationJobProcessor`
+  - Demo verification: `GET /actuator/metrics/generation.pipeline.outcome.total`
+- `generation.pipeline.retry_needed.total`
+  - Produced by: retry scheduling / queue rejection / recovery watchdog
+  - Sources:
+    - `GenerationJobProcessor` (`retryable_failure`)
+    - `GenerationJobService` (`queue_rejected`)
+    - `GenerationJobRecoveryService` (`watchdog_timeout`)
+  - Demo verification: `GET /actuator/metrics/generation.pipeline.retry_needed.total`
+
+## Test Evidence
+
+- Retry behavior and audit markers:
+  - `backend/api/src/test/java/ru/vkr/contracts/api/service/GenerationJobProcessorIntegrationTest.java`
+- Partial outage handling:
+  - `backend/api/src/test/java/ru/vkr/contracts/api/service/OpenApiPipelineNexusDowntimeE2EIntegrationTest.java`
+
+## Before/After Metrics Table (for defense)
+
+Use this table in Chapter 6 and during demo. Fill values from repeatable test runs (same machine/profile).
+
+| Metric | Before automation (manual baseline) | After automation (platform) | Evidence source |
+| --- | --- | --- | --- |
+| Time to publish OpenAPI contract | _fill from baseline run_ | _fill from `generation.pipeline.duration` + runbook time_ | `GET /actuator/metrics/generation.pipeline.duration`, demo timer |
+| Time to publish AsyncAPI contract | _fill from baseline run_ | _fill from `generation.pipeline.duration` + runbook time_ | `GET /actuator/metrics/generation.pipeline.duration` (tag `contract_type=asyncapi`) |
+| Failed publication ratio | _manual estimate_ | _from `generation.pipeline.outcome.total` tags_ | `GET /actuator/metrics/generation.pipeline.outcome.total` |
+| Retry-needed events | N/A (manual retries not observable) | _from retry counter_ | `GET /actuator/metrics/generation.pipeline.retry_needed.total` |
+| Traceability depth | Fragmented logs | End-to-end by correlation id | `publication_logs` query + application logs |
+
+## Data Collection Protocol
+
+1. Run at least 5 OpenAPI and 5 AsyncAPI generation jobs.
+2. Record start/end timestamps for manual baseline and platform-assisted flow.
+3. Export actuator snapshots for:
+   - `generation.pipeline.duration`
+   - `generation.pipeline.outcome.total`
+   - `generation.pipeline.retry_needed.total`
+4. Preserve one correlation-id trace in DB + logs as proof artifact.
+5. Include raw snapshots as appendix references in thesis materials.
