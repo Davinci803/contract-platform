@@ -20,6 +20,9 @@ public class EntityContract {
     private ContractType type;
 
     @Column(nullable = false)
+    private int activeAsyncSubjectMajor;
+
+    @Column(nullable = false)
     private Instant createdAt;
 
     protected EntityContract() {
@@ -28,6 +31,7 @@ public class EntityContract {
     public EntityContract(String name, ContractType type) {
         this.name = name;
         this.type = type;
+        this.activeAsyncSubjectMajor = 1;
         this.createdAt = Instant.now();
     }
 
@@ -41,5 +45,14 @@ public class EntityContract {
 
     public ContractType getType() {
         return type;
+    }
+
+    public int getActiveAsyncSubjectMajor() {
+        return activeAsyncSubjectMajor;
+    }
+
+    public int bumpAsyncSubjectMajor() {
+        this.activeAsyncSubjectMajor = this.activeAsyncSubjectMajor + 1;
+        return this.activeAsyncSubjectMajor;
     }
 }

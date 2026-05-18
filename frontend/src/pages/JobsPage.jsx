@@ -76,6 +76,7 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
     setNotice("");
     try {
       const report = await getLatestCompatibilityReport(Number(selectedContractVersionId));
+      let publishInNewMajorSubject = false;
       if (report?.level === "BREAKING") {
         const confirmed = window.confirm(
           `Compatibility report #${report.id} is BREAKING (recommended bump: ${report.semverRecommendation}).\n\n` +
@@ -88,8 +89,15 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
           );
           return;
         }
+        const isAsyncApiBreaking = String(report.findings ?? "").toUpperCase().includes("ASYNCAPI_");
+        if (isAsyncApiBreaking) {
+          publishInNewMajorSubject = true;
+          setNotice(
+            "AsyncAPI breaking change accepted. Platform will publish to a new major subject version (v2/v3/...)."
+          );
+        }
       }
-      const job = await createGenerationJob(Number(selectedContractVersionId));
+      const job = await createGenerationJob(Number(selectedContractVersionId), publishInNewMajorSubject);
       onJobUpdated(job);
     } catch (error) {
       setState({ loading: false, error: error.message });

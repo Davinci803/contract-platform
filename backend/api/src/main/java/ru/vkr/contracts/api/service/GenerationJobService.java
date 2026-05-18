@@ -37,16 +37,17 @@ public class GenerationJobService {
     }
 
     @Transactional
-    public JobResponse create(Long contractVersionId) {
+    public JobResponse create(Long contractVersionId, boolean publishInNewMajorSubject) {
         ContractVersion contractVersion = contractVersionRepository.findById(contractVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("Contract version not found: " + contractVersionId));
         String correlationId = MDC.get("correlationId");
-        GenerationJob job = generationJobRepository.save(new GenerationJob(contractVersion, correlationId));
+        GenerationJob job = generationJobRepository.save(new GenerationJob(contractVersion, correlationId, publishInNewMajorSubject));
         publicationLogRepository.save(new PublicationLog(
                 job,
                 "PIPELINE",
                 "PENDING",
-                "event=job-created; contractVersionId=" + contractVersionId,
+                "event=job-created; contractVersionId=" + contractVersionId
+                        + "; publishNewMajorSubject=" + publishInNewMajorSubject,
                 "JOB_CREATED",
                 PublicationLog.ERROR_CATEGORY_NONE
         ));
@@ -64,6 +65,11 @@ public class GenerationJobService {
             }
         });
         return toResponse(job);
+    }
+
+    @Transactional
+    public JobResponse create(Long contractVersionId) {
+        return create(contractVersionId, false);
     }
 
     @Transactional(readOnly = true)

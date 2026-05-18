@@ -99,6 +99,15 @@ public class AsyncApiPipeline {
     }
 
     public GenerationResult generateAndPublish(String contractName, String version, String content) {
+        return generateAndPublish(contractName, version, content, 1);
+    }
+
+    public GenerationResult generateAndPublish(
+            String contractName,
+            String version,
+            String content,
+            int majorSubjectVersion
+    ) {
         StringBuilder log = new StringBuilder();
         Path workspace = null;
         try {
@@ -115,7 +124,11 @@ public class AsyncApiPipeline {
                     log
             );
 
-            String schemaSubject = namingStrategy.buildSubject(contractName, buildOutput.spec().primaryMessageName());
+            String schemaSubject = namingStrategy.buildSubjectForMajor(
+                    contractName,
+                    buildOutput.spec().primaryMessageName(),
+                    majorSubjectVersion
+            );
             AsyncApiPublicationService.AsyncApiPublicationResult publicationResult = publicationService.registerSchemaAndPublish(
                     groupId,
                     artifactId,

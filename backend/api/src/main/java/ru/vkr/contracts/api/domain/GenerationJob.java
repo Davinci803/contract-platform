@@ -33,14 +33,21 @@ public class GenerationJob {
     @Column(nullable = false, length = 64)
     private String correlationId;
 
+    @Column(nullable = false)
+    private boolean publishNewMajorSubject;
+
     protected GenerationJob() {
     }
 
     public GenerationJob(ContractVersion contractVersion) {
-        this(contractVersion, UUID.randomUUID().toString());
+        this(contractVersion, UUID.randomUUID().toString(), false);
     }
 
     public GenerationJob(ContractVersion contractVersion, String correlationId) {
+        this(contractVersion, correlationId, false);
+    }
+
+    public GenerationJob(ContractVersion contractVersion, String correlationId, boolean publishNewMajorSubject) {
         this.contractVersion = contractVersion;
         this.status = JobStatus.PENDING;
         this.createdAt = Instant.now();
@@ -48,6 +55,7 @@ public class GenerationJob {
         this.correlationId = correlationId == null || correlationId.isBlank()
                 ? UUID.randomUUID().toString()
                 : correlationId;
+        this.publishNewMajorSubject = publishNewMajorSubject;
     }
 
     public Long getId() {
@@ -68,6 +76,10 @@ public class GenerationJob {
 
     public String getCorrelationId() {
         return correlationId;
+    }
+
+    public boolean isPublishNewMajorSubject() {
+        return publishNewMajorSubject;
     }
 
     public void markRunning() {

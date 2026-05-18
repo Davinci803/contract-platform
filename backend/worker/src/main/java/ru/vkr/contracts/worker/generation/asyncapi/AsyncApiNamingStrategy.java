@@ -30,11 +30,25 @@ public class AsyncApiNamingStrategy {
     }
 
     public String buildSubject(String contractName, String messageName) {
+        return buildSubject(contractName, messageName, subjectSuffix);
+    }
+
+    public String buildSubjectForMajor(String contractName, String messageName, int majorSubjectVersion) {
+        if (majorSubjectVersion <= 1) {
+            return buildSubject(contractName, messageName);
+        }
+        return buildSubject(contractName, messageName, "v" + majorSubjectVersion + "-value");
+    }
+
+    public String buildSubject(String contractName, String messageName, String subjectSuffixOverride) {
+        String suffix = subjectSuffixOverride == null || subjectSuffixOverride.isBlank()
+                ? subjectSuffix
+                : subjectSuffixOverride;
         return normalizeForSubject(contractName)
                 + "."
                 + normalizeForSubject(messageName)
                 + "-"
-                + normalizeForSubject(subjectSuffix);
+                + normalizeForSubject(suffix);
     }
 
     private String normalizeForSubject(String value) {

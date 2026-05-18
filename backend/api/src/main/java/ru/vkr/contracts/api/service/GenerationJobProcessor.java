@@ -17,6 +17,7 @@ import ru.vkr.contracts.api.repo.ContractVersionRepository;
 import ru.vkr.contracts.api.repo.GeneratedArtifactRepository;
 import ru.vkr.contracts.api.repo.GenerationJobRepository;
 import ru.vkr.contracts.api.repo.PublicationLogRepository;
+import ru.vkr.contracts.shared.model.CompatibilityLevel;
 import ru.vkr.contracts.shared.model.ContractType;
 import ru.vkr.contracts.shared.model.JobStatus;
 import ru.vkr.contracts.worker.compat.CompatibilityResult;
@@ -120,6 +121,7 @@ public class GenerationJobProcessor {
                     PublicationLog.ERROR_CATEGORY_NONE
             ));
             CompatibilityResult compatibility = compatibilityService.analyze(current);
+            int asyncMajorSubjectVersion = resolveAsyncMajorSubjectVersion(job, current, compatibility);
             publicationLogRepository.save(new PublicationLog(
                     job,
                     "COMPATIBILITY",
@@ -140,7 +142,7 @@ public class GenerationJobProcessor {
                     "PIPELINE_STARTED",
                     PublicationLog.ERROR_CATEGORY_NONE
             ));
-            GenerationResult generationResult = runPipelineWithRetry(job, current, previous);
+            GenerationResult generationResult = runPipelineWithRetry(job, current, previous, asyncMajorSubjectVersion);
             generatedArtifactRepository.save(new GeneratedArtifact(
                     job,
                     generationResult.coordinates(),
@@ -216,7 +218,11 @@ public class GenerationJobProcessor {
         return true;
     }
 
-    private GenerationResult runPipeline(ContractVersion version, ContractVersion previousVersion) {
+    private GenerationResult runPipeline(
+            ContractVersion version,
+            ContractVersion previousVersion,
+            int asyncMajorSubjectVersion
+    ) {
         String contractName = version.getContract().getName();
         String previousContent = previousVersion == null ? null : previousVersion.getContent();
         return switch (version.getContract().getType()) {
@@ -226,15 +232,25 @@ public class GenerationJobProcessor {
                     version.getContent(),
                     previousContent
             );
-            case ASYNCAPI -> asyncApiPipeline.generateAndPublish(contractName, version.getVersion(), version.getContent());
+            case ASYNCAPI -> asyncApiPipeline.generateAndPublish(
+                    contractName,
+                    version.getVersion(),
+                    version.getContent(),
+                    asyncMajorSubjectVersion
+            );
         };
     }
 
-    private GenerationResult runPipelineWithRetry(GenerationJob job, ContractVersion current, ContractVersion previous) {
+    private GenerationResult runPipelineWithRetry(
+            GenerationJob job,
+            ContractVersion current,
+            ContractVersion previous,
+            int asyncMajorSubjectVersion
+    ) {
         RuntimeException lastFailure = null;
         for (int attempt = 1; attempt <= retryMaxAttempts; attempt++) {
             try {
-                return runPipeline(current, previous);
+                return runPipeline(current, previous, asyncMajorSubjectVersion);
             } catch (RuntimeException e) {
                 lastFailure = e;
                 FailureType failureType = classifyFailure(e);
@@ -263,6 +279,30 @@ public class GenerationJobProcessor {
         throw lastFailure == null
                 ? new IllegalStateException("Unexpected pipeline retry state")
                 : lastFailure;
+    }
+
+    private int resolveAsyncMajorSubjectVersion(
+            GenerationJob job,
+            ContractVersion current,
+            CompatibilityResult compatibility
+    ) {
+        if (current.getContract().getType() != ContractType.ASYNCAPI) {
+            return 1;
+        }
+        int activeMajor = current.getContract().getActiveAsyncSubjectMajor();
+        if (job.isPublishNewMajorSubject() && compatibility.level() == CompatibilityLevel.BREAKING) {
+            int bumped = current.getContract().bumpAsyncSubjectMajor();
+            publicationLogRepository.save(new PublicationLog(
+                    job,
+                    "SCHEMA_REGISTRY",
+                    "RUNNING",
+                    "event=major-subject-bumped; previousMajor=" + activeMajor + "; nextMajor=" + bumped,
+                    "SCHEMA_MAJOR_SUBJECT_BUMPED",
+                    PublicationLog.ERROR_CATEGORY_NONE
+            ));
+            return bumped;
+        }
+        return activeMajor;
     }
 
     private void sleepBackoff(long delayMs, Long jobId, int attempt, int maxAttempts) {

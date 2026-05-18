@@ -19,7 +19,7 @@ public class GenerationController {
     @PostMapping
     @ResponseStatus(HttpStatus.ACCEPTED)
     public JobResponse create(@Valid @RequestBody GenerateRequest request) {
-        return generationJobService.create(request.contractVersionId());
+        return generationJobService.create(request.contractVersionId(), request.publishInNewMajorSubjectEnabled());
     }
 
     @GetMapping("/{jobId}")

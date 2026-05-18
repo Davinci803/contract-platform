@@ -65,11 +65,11 @@ export function getContractHistory(contractId) {
   return request(`/api/contracts/${contractId}/versions`);
 }
 
-export function createGenerationJob(contractVersionId) {
+export function createGenerationJob(contractVersionId, publishInNewMajorSubject = false) {
   return request("/api/generation-jobs", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ contractVersionId })
+    body: JSON.stringify({ contractVersionId, publishInNewMajorSubject })
   });
 }
 
