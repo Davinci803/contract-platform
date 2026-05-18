@@ -73,7 +73,22 @@ public class GenerationJobService {
                 .orElseThrow(() -> new IllegalArgumentException("Job not found: " + id));
     }
 
+    @Transactional(readOnly = true)
+    public JobResponse getByCorrelationId(String correlationId) {
+        if (correlationId == null || correlationId.isBlank()) {
+            throw new IllegalArgumentException("Correlation id must not be blank");
+        }
+        return generationJobRepository.findTopByCorrelationIdOrderByIdDesc(correlationId.trim()).map(this::toResponse)
+                .orElseThrow(() -> new IllegalArgumentException("Job not found for correlationId: " + correlationId));
+    }
+
     private JobResponse toResponse(GenerationJob job) {
-        return new JobResponse(job.getId(), job.getContractVersion().getId(), job.getStatus(), job.getLog());
+        return new JobResponse(
+                job.getId(),
+                job.getContractVersion().getId(),
+                job.getCorrelationId(),
+                job.getStatus(),
+                job.getLog()
+        );
     }
 }

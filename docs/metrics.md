@@ -78,14 +78,26 @@ Correlation id is passed through all layers:
 ### Trace a single job
 
 1. Capture correlation id from API response header.
-2. Search application logs by `corr:<id>`.
-3. Query DB:
+2. Resolve job by correlation id:
+
+```bash
+curl -u viewer:view123 "http://localhost:8080/api/generation-jobs?correlationId=<id>"
+curl -u viewer:view123 "http://localhost:8080/api/read-model/publication-logs?limit=20&correlationId=<id>"
+curl -u viewer:view123 "http://localhost:8080/api/read-model/artifacts?limit=10&correlationId=<id>"
+```
+
+3. Search application logs by `corr:<id>`.
+4. Query DB:
 
 ```sql
-select id, job_id, target, status, event_type, correlation_id, created_at
-from publication_logs
-where correlation_id = '<id>'
-order by created_at asc;
+select j.id as job_id, j.status as job_status, j.correlation_id, j.created_at as job_created_at
+from generation_jobs j
+where j.correlation_id = '<id>';
+
+select p.id, p.job_id, p.target, p.status, p.event_type, p.error_category, p.correlation_id, p.created_at
+from publication_logs p
+where p.correlation_id = '<id>'
+order by p.created_at asc;
 ```
 
 This gives a full chain from request to background pipeline to persisted audit trail.

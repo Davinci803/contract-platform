@@ -7,4 +7,6 @@ public interface GeneratedArtifactRepository extends JpaRepository<GeneratedArti
     long countByJob_Id(Long jobId);
 
     java.util.List<GeneratedArtifact> findTop20ByOrderByIdDesc();
+
+    java.util.List<GeneratedArtifact> findTop20ByJob_CorrelationIdOrderByIdDesc(String correlationId);
 }

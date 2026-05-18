@@ -35,9 +35,16 @@ public class ReadModelController {
     }
 
     @GetMapping("/artifacts")
-    public List<ArtifactResponse> artifacts(@RequestParam(name = "limit", defaultValue = "20") int limit) {
+    public List<ArtifactResponse> artifacts(
+            @RequestParam(name = "limit", defaultValue = "20") int limit,
+            @RequestParam(name = "correlationId", required = false) String correlationId
+    ) {
         int cappedLimit = Math.max(1, Math.min(limit, 20));
-        return generatedArtifactRepository.findTop20ByOrderByIdDesc().stream()
+        String normalizedCorrelationId = normalizeCorrelationId(correlationId);
+        List<ru.vkr.contracts.api.domain.GeneratedArtifact> source = normalizedCorrelationId == null
+                ? generatedArtifactRepository.findTop20ByOrderByIdDesc()
+                : generatedArtifactRepository.findTop20ByJob_CorrelationIdOrderByIdDesc(normalizedCorrelationId);
+        return source.stream()
                 .limit(cappedLimit)
                 .map(artifact -> new ArtifactResponse(
                         artifact.getId(),
@@ -50,9 +57,16 @@ public class ReadModelController {
     }
 
     @GetMapping("/publication-logs")
-    public List<PublicationLogResponse> publicationLogs(@RequestParam(name = "limit", defaultValue = "30") int limit) {
+    public List<PublicationLogResponse> publicationLogs(
+            @RequestParam(name = "limit", defaultValue = "30") int limit,
+            @RequestParam(name = "correlationId", required = false) String correlationId
+    ) {
         int cappedLimit = Math.max(1, Math.min(limit, 50));
-        return publicationLogRepository.findTop50ByOrderByIdDesc().stream()
+        String normalizedCorrelationId = normalizeCorrelationId(correlationId);
+        List<ru.vkr.contracts.api.domain.PublicationLog> source = normalizedCorrelationId == null
+                ? publicationLogRepository.findTop50ByOrderByIdDesc()
+                : publicationLogRepository.findTop50ByCorrelationIdOrderByIdDesc(normalizedCorrelationId);
+        return source.stream()
                 .limit(cappedLimit)
                 .map(log -> new PublicationLogResponse(
                         log.getId(),
@@ -65,5 +79,12 @@ public class ReadModelController {
                         log.getCorrelationId()
                 ))
                 .toList();
+    }
+
+    private String normalizeCorrelationId(String correlationId) {
+        if (correlationId == null || correlationId.isBlank()) {
+            return null;
+        }
+        return correlationId.trim();
     }
 }

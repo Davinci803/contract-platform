@@ -7,6 +7,7 @@ const STAGES = ["PENDING", "RUNNING", "SUCCESS"];
 
 export default function JobsPage({ selectedContractVersionId, currentJob, onJobUpdated }) {
   const [state, setState] = useState({ loading: false, error: "" });
+  const [copyState, setCopyState] = useState("");
   const stageState = useMemo(() => deriveStageState(currentJob?.status), [currentJob?.status]);
 
   async function startJob() {
@@ -41,18 +42,30 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
     setState({ loading: false, error: "" });
   }
 
+  async function copyCorrelationId() {
+    if (!currentJob?.correlationId) {
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(currentJob.correlationId);
+      setCopyState("Copied correlation ID. Use it to filter trace in Step 4.");
+    } catch {
+      setCopyState("Copy failed. Check browser clipboard permissions.");
+    }
+  }
+
   return (
     <div className="page">
       <Panel
-        title="Generation Job"
-        description="Run pipeline for selected contract version and track status."
+        title="Step 2: Generate and Publish"
+        description="Run the pipeline for selected version and wait for SUCCESS before moving on."
       >
         <div className="row">
           <p>
             Selected version ID: <strong>{selectedContractVersionId || "-"}</strong>
           </p>
           <button disabled={state.loading || !selectedContractVersionId} onClick={startJob}>
-            {state.loading ? "Submitting..." : "Generate & Publish"}
+            {state.loading ? "Submitting..." : "Generate and publish"}
           </button>
           <button
             className="secondary"
@@ -62,10 +75,13 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
             Refresh Job
           </button>
         </div>
+        <p className="muted helper-text">
+          When status becomes <strong>SUCCESS</strong>, proceed to step 3 for compatibility details.
+        </p>
         {state.error && <p className="error">{state.error}</p>}
       </Panel>
 
-      <Panel title="Job Status" description="Pipeline stages visualization.">
+      <Panel title="Job Status" description="Pipeline execution state for this generation request.">
         {!currentJob && <p className="muted">No job created yet.</p>}
         {currentJob && (
           <>
@@ -75,6 +91,13 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
             <p>
               Status: <StatusBadge value={currentJob.status} />
             </p>
+            <p>
+              Correlation ID: <span className="mono">{currentJob.correlationId || "-"}</span>
+            </p>
+            <button className="secondary" disabled={!currentJob.correlationId} onClick={copyCorrelationId}>
+              Copy correlation ID
+            </button>
+            {copyState && <p className="muted helper-text">{copyState}</p>}
             <div className="timeline">
               {STAGES.map((stage) => (
                 <div
@@ -92,7 +115,7 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
         )}
       </Panel>
 
-      <Panel title="Job Log" description="Latest execution details from backend.">
+      <Panel title="Execution Log" description="Raw backend log to explain failures and retries.">
         {!currentJob?.log && <p className="muted">No log available yet.</p>}
         {currentJob?.log && <pre>{currentJob.log}</pre>}
       </Panel>

@@ -26,4 +26,9 @@ public class GenerationController {
     public JobResponse get(@PathVariable("jobId") Long jobId) {
         return generationJobService.get(jobId);
     }
+
+    @GetMapping(params = "correlationId")
+    public JobResponse getByCorrelationId(@RequestParam("correlationId") String correlationId) {
+        return generationJobService.getByCorrelationId(correlationId);
+    }
 }

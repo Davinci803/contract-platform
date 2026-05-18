@@ -37,11 +37,40 @@ Use this exact order during defense:
    - upload breaking revision
    - show compatibility report and migration advice
 6. Observability:
-   - show `X-Correlation-Id`
-   - show `publication_logs` trace by correlation id
+   - copy `correlationId` from Step 2 (Job Status)
+   - show `request -> job -> publication logs` trace by correlation id
    - show metrics endpoints (`duration`, `outcome`, `retry_needed`)
 7. CI proof:
    - show latest green workflow and artifact reports
+
+## Reference Endpoints (External Consumer)
+
+Use these ready commands during demo and integration checks:
+
+```bash
+# Read-model artifacts (coordinates, publicationUrl, schemaSubject)
+curl -u viewer:view123 "http://localhost:8080/api/read-model/artifacts?limit=10"
+
+# Read-model publication events (eventType, status, errorCategory, correlationId)
+curl -u viewer:view123 "http://localhost:8080/api/read-model/publication-logs?limit=20"
+
+# Find job by correlation id (replace <corr-id>)
+curl -u viewer:view123 "http://localhost:8080/api/generation-jobs?correlationId=<corr-id>"
+
+# Filter read-model by the same correlation id
+curl -u viewer:view123 "http://localhost:8080/api/read-model/publication-logs?limit=20&correlationId=<corr-id>"
+curl -u viewer:view123 "http://localhost:8080/api/read-model/artifacts?limit=10&correlationId=<corr-id>"
+
+# Actuator metrics
+curl "http://localhost:8080/actuator/metrics/generation.pipeline.duration"
+curl "http://localhost:8080/actuator/metrics/generation.pipeline.outcome"
+curl "http://localhost:8080/actuator/metrics/generation.pipeline.retry_needed"
+
+# Schema Registry reference endpoints
+curl "http://localhost:8085/subjects"
+curl "http://localhost:8085/subjects/{subject}/versions"
+curl "http://localhost:8085/schemas/ids/{id}"
+```
 
 ## Expected Checkpoints
 
@@ -74,8 +103,8 @@ Use this exact order during defense:
 1. Stop `schema-registry` service.
 2. Trigger AsyncAPI job.
 3. Show:
-   - failure classification in `PublicationLog`
-   - compensation marker from async publication flow.
+   - failure classification in `PublicationLog` (`RETRYING`, `FAILED_RETRYABLE`, `PIPELINE_FAILED`)
+   - compensation marker from async publication flow (`compensation=not_required|rollback_ok|rollback_failed`).
 
 ### Fallback Procedure C (UI unavailable)
 

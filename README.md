@@ -150,14 +150,50 @@ Credentials are loaded from environment variables in backend config:
   - create async generation job for a contract version
 - `GET /api/generation-jobs/{jobId}`
   - get current job status and job log
+- `GET /api/generation-jobs?correlationId={id}`
+  - find latest job by correlation id
 - `GET /api/compatibility-reports`
   - list compatibility reports
 - `GET /api/read-model/summary`
   - get simple counters (`artifacts`, `publicationLogs`)
 - `GET /api/read-model/artifacts`
   - list latest generated artifacts with coordinates/publication URLs
+  - optional query param: `correlationId`
 - `GET /api/read-model/publication-logs`
   - list recent pipeline/publication events
+  - optional query param: `correlationId`
+
+### Integration Reference Commands
+
+```bash
+# Artifacts read-model fields:
+# - coordinates
+# - publicationUrl
+# - schemaSubject
+curl -u viewer:view123 "http://localhost:8080/api/read-model/artifacts?limit=10"
+
+# Publication-log read-model fields:
+# - eventType
+# - status
+# - errorCategory
+# - correlationId
+curl -u viewer:view123 "http://localhost:8080/api/read-model/publication-logs?limit=20"
+
+# Correlation trace helpers
+curl -u viewer:view123 "http://localhost:8080/api/generation-jobs?correlationId=<corr-id>"
+curl -u viewer:view123 "http://localhost:8080/api/read-model/publication-logs?limit=20&correlationId=<corr-id>"
+curl -u viewer:view123 "http://localhost:8080/api/read-model/artifacts?limit=10&correlationId=<corr-id>"
+
+# Actuator metrics reference
+curl "http://localhost:8080/actuator/metrics/generation.pipeline.duration"
+curl "http://localhost:8080/actuator/metrics/generation.pipeline.outcome"
+curl "http://localhost:8080/actuator/metrics/generation.pipeline.retry_needed"
+
+# Schema Registry reference
+curl "http://localhost:8085/subjects"
+curl "http://localhost:8085/subjects/{subject}/versions"
+curl "http://localhost:8085/schemas/ids/{id}"
+```
 
 ### API documentation
 

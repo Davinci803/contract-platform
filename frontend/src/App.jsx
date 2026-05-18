@@ -9,36 +9,78 @@ export default function App() {
   const [selectedContractId, setSelectedContractId] = useState("");
   const [selectedContractVersionId, setSelectedContractVersionId] = useState("");
   const [currentJob, setCurrentJob] = useState(null);
+  const [compatibilityLoaded, setCompatibilityLoaded] = useState(false);
+  const [artifactsLoaded, setArtifactsLoaded] = useState(false);
 
-  const tabs = useMemo(
+  const flowSteps = useMemo(
     () => [
-      { id: "contracts", label: "Contracts & Versions" },
-      { id: "jobs", label: "Generation Job" },
-      { id: "compatibility", label: "Compatibility" },
-      { id: "artifacts", label: "Artifacts & Publications" }
+      {
+        id: "contracts",
+        label: "Upload",
+        hint: "Upload a contract version and choose one for generation.",
+        completed: Boolean(selectedContractVersionId)
+      },
+      {
+        id: "jobs",
+        label: "Generate",
+        hint: "Run generation pipeline and wait for SUCCESS.",
+        completed: currentJob?.status === "SUCCESS"
+      },
+      {
+        id: "compatibility",
+        label: "Compatibility",
+        hint: "Load compatibility report and check SemVer recommendation.",
+        completed: compatibilityLoaded
+      },
+      {
+        id: "artifacts",
+        label: "Artifacts",
+        hint: "Load read-model and copy integration values.",
+        completed: artifactsLoaded
+      }
     ],
-    []
+    [artifactsLoaded, compatibilityLoaded, currentJob?.status, selectedContractVersionId]
   );
+  const currentStep = flowSteps.find((step) => step.id === activeTab);
+  const nextStep = flowSteps.find((step) => !step.completed);
 
   return (
     <main>
-      <h1>Contract Platform UI Flow</h1>
+      <h1>Contract Platform Guided Demo</h1>
       <p className="muted">
-        End-to-end demo: contracts, version history, compatibility advice, job timeline, and
-        publication artifacts.
+        Follow the flow from upload to copied artifact values. Each step shows what to do next.
       </p>
-      <nav className="tabs">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={activeTab === tab.id ? "tab active" : "tab"}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            {tab.label}
+      <section className="panel flow-panel">
+        <h2>Scenario Progress</h2>
+        <div className="flow-steps">
+          {flowSteps.map((step, index) => (
+            <button
+              key={step.id}
+              className={`flow-step ${activeTab === step.id ? "active" : ""} ${
+                step.completed ? "done" : ""
+              }`}
+              onClick={() => setActiveTab(step.id)}
+            >
+              <span>{index + 1}</span>
+              <strong>{step.label}</strong>
+            </button>
+          ))}
+        </div>
+        <p className="muted flow-hint">
+          {currentStep?.hint}
+          {nextStep && (
+            <>
+              {" "}
+              Next recommended action: open <strong>{nextStep.label}</strong>.
+            </>
+          )}
+        </p>
+        {nextStep && (
+          <button className="secondary" onClick={() => setActiveTab(nextStep.id)}>
+            Go to next step: {nextStep.label}
           </button>
-        ))}
-      </nav>
-
+        )}
+      </section>
       {activeTab === "contracts" && (
         <ContractsPage
           selectedContractId={selectedContractId}
@@ -54,8 +96,15 @@ export default function App() {
           onJobUpdated={setCurrentJob}
         />
       )}
-      {activeTab === "compatibility" && <CompatibilityPage />}
-      {activeTab === "artifacts" && <ArtifactsPage />}
+      {activeTab === "compatibility" && (
+        <CompatibilityPage onReportsLoaded={(loaded) => setCompatibilityLoaded(loaded)} />
+      )}
+      {activeTab === "artifacts" && (
+        <ArtifactsPage
+          currentJob={currentJob}
+          onReadModelLoaded={(loaded) => setArtifactsLoaded(loaded)}
+        />
+      )}
     </main>
   );
 }

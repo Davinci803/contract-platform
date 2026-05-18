@@ -1,6 +1,7 @@
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
 const API_USERNAME = (import.meta.env.VITE_API_USERNAME ?? "").trim();
 const API_PASSWORD = import.meta.env.VITE_API_PASSWORD ?? "";
+let latestCorrelationId = "";
 
 export const missingConfigMessage =
   "Frontend env is not configured. Set VITE_API_BASE_URL, VITE_API_USERNAME and VITE_API_PASSWORD.";
@@ -20,13 +21,22 @@ function getAuthHeader() {
 }
 
 async function request(path, options = {}) {
+  const correlationHeader =
+    latestCorrelationId && !(options.headers && "X-Correlation-Id" in options.headers)
+      ? { "X-Correlation-Id": latestCorrelationId }
+      : {};
   const response = await fetch(buildUrl(path), {
     ...options,
     headers: {
       Authorization: getAuthHeader(),
+      ...correlationHeader,
       ...(options.headers ?? {})
     }
   });
+  const responseCorrelationId = (response.headers.get("X-Correlation-Id") ?? "").trim();
+  if (responseCorrelationId) {
+    latestCorrelationId = responseCorrelationId;
+  }
 
   if (!response.ok) {
     const payload = await response.json().catch(() => ({}));
@@ -67,6 +77,10 @@ export function getGenerationJob(jobId) {
   return request(`/api/generation-jobs/${jobId}`);
 }
 
+export function getGenerationJobByCorrelationId(correlationId) {
+  return request(`/api/generation-jobs?correlationId=${encodeURIComponent(correlationId)}`);
+}
+
 export function listCompatibilityReports() {
   return request("/api/compatibility-reports");
 }
@@ -75,10 +89,16 @@ export function getReadModelSummary() {
   return request("/api/read-model/summary");
 }
 
-export function listArtifacts(limit = 20) {
-  return request(`/api/read-model/artifacts?limit=${limit}`);
+export function listArtifacts(limit = 20, correlationId = "") {
+  const correlationQuery = correlationId ? `&correlationId=${encodeURIComponent(correlationId)}` : "";
+  return request(`/api/read-model/artifacts?limit=${limit}${correlationQuery}`);
 }
 
-export function listPublicationLogs(limit = 30) {
-  return request(`/api/read-model/publication-logs?limit=${limit}`);
+export function listPublicationLogs(limit = 30, correlationId = "") {
+  const correlationQuery = correlationId ? `&correlationId=${encodeURIComponent(correlationId)}` : "";
+  return request(`/api/read-model/publication-logs?limit=${limit}${correlationQuery}`);
+}
+
+export function getLatestCorrelationId() {
+  return latestCorrelationId;
 }

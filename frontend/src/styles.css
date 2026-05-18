@@ -19,6 +19,10 @@ main {
   margin-bottom: 16px;
 }
 
+.flow-panel {
+  padding-bottom: 20px;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
@@ -76,6 +80,48 @@ button:disabled {
   flex-wrap: wrap;
 }
 
+.flow-steps {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  margin: 14px 0;
+}
+
+.flow-step {
+  margin: 0;
+  background: #f7f9ff;
+  border: 1px solid #dbe3f7;
+  color: #25314a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flow-step span {
+  min-width: 24px;
+  min-height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #e4ebff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.flow-step.active {
+  border-color: #5f79d8;
+}
+
+.flow-step.done {
+  border-color: #dbe3f7;
+  background: #f7f9ff;
+}
+
+.flow-hint {
+  margin-top: 0;
+}
+
 .tab {
   background: white;
   color: #1d2530;
@@ -92,6 +138,48 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 12px;
+}
+
+.compact-cards {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 360px));
+  justify-content: flex-start;
+}
+
+.section-switch {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.report-browser {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.report-list {
+  display: grid;
+  gap: 8px;
+}
+
+.report-item {
+  margin: 0;
+  text-align: left;
+  background: #f9fbff;
+  color: #1d2530;
+  border: 1px solid #dde4f2;
+}
+
+.report-item.selected {
+  border-color: #5f79d8;
+  box-shadow: 0 0 0 2px rgba(95, 121, 216, 0.18);
+}
+
+.report-details {
+  min-height: 240px;
 }
 
 .card {
@@ -115,6 +203,15 @@ button:disabled {
 
 .muted {
   color: #63708a;
+}
+
+.helper-text {
+  margin: 8px 0 0;
+}
+
+.copy-success {
+  color: #1e6f38;
+  font-weight: 700;
 }
 
 .split {
@@ -212,4 +309,10 @@ pre {
 .error {
   color: #b32020;
   font-weight: bold;
+}
+
+@media (max-width: 900px) {
+  .report-browser {
+    grid-template-columns: 1fr;
+  }
 }

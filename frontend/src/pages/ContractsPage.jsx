@@ -89,8 +89,8 @@ export default function ContractsPage({
   return (
     <div className="page">
       <Panel
-        title="Upload Contract Version"
-        description="Create a new contract version directly from UI."
+        title="Step 1: Upload Contract Version"
+        description="Create a version, then select it below. The selected version is used on the next step."
       >
         <label>
           Name
@@ -112,14 +112,17 @@ export default function ContractsPage({
           />
         </label>
         <button disabled={uploadState.loading} onClick={upload}>
-          {uploadState.loading ? "Uploading..." : "Upload Version"}
+          {uploadState.loading ? "Uploading..." : "Upload and select version"}
         </button>
+        <p className="muted helper-text">
+          After upload, open step 2 and click <strong>Generate and publish</strong>.
+        </p>
         {uploadState.error && <p className="error">{uploadState.error}</p>}
       </Panel>
 
       <Panel
-        title="Contracts"
-        description="Select contract to inspect its version history."
+        title="Contracts Catalog"
+        description="Choose a contract to load its versions."
         actions={
           <button className="secondary" disabled={listState.loading} onClick={loadContracts}>
             Refresh
@@ -151,8 +154,8 @@ export default function ContractsPage({
       </Panel>
 
       <Panel
-        title="Version History"
-        description="Latest version is preselected for generation."
+        title="Available Versions"
+        description="Pick the exact version you want to generate."
       >
         {!selectedContractId && <p className="muted">Select contract to load history.</p>}
         {selectedContractId && historyState.loading && <p className="muted">Loading history...</p>}

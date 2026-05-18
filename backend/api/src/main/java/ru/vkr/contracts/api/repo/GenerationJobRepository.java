@@ -11,6 +11,8 @@ import java.time.Instant;
 import java.util.List;
 
 public interface GenerationJobRepository extends JpaRepository<GenerationJob, Long> {
+    java.util.Optional<GenerationJob> findTopByCorrelationIdOrderByIdDesc(String correlationId);
+
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
             update GenerationJob j
