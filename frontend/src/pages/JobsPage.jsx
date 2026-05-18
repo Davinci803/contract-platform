@@ -1,20 +1,70 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Panel from "../components/Panel";
-import StatusBadge from "../components/StatusBadge";
-import { createGenerationJob, getGenerationJob } from "../api";
+import { createGenerationJob, getGenerationJob, getLatestCompatibilityReport } from "../api";
 
-const STAGES = ["PENDING", "RUNNING", "SUCCESS"];
-
-const STAGE_LABEL = {
-  PENDING: "Queued",
-  RUNNING: "Processing",
-  SUCCESS: "Completed"
+const STATUS_CONFIG = {
+  PENDING: {
+    icon: "◌",
+    label: "Queued",
+    desc: "Job is waiting to be picked up by the worker.",
+    bg: "var(--c-surface-2)",
+    border: "var(--c-border)",
+    color: "var(--c-text-2)",
+    iconColor: "var(--c-text-3)",
+  },
+  RUNNING: {
+    icon: "◎",
+    label: "Processing",
+    desc: "Pipeline is running — refresh in a moment.",
+    bg: "var(--c-info-bg)",
+    border: "var(--c-info-border)",
+    color: "var(--c-info)",
+    iconColor: "var(--c-info)",
+  },
+  SUCCESS: {
+    icon: "✓",
+    label: "Success",
+    desc: "Pipeline completed. Proceed to Compatibility check.",
+    bg: "var(--c-success-bg)",
+    border: "var(--c-success-border)",
+    color: "var(--c-success)",
+    iconColor: "var(--c-success)",
+  },
+  FAILED: {
+    icon: "✕",
+    label: "Failed",
+    desc: "Pipeline failed. Check the execution log below.",
+    bg: "var(--c-error-bg)",
+    border: "var(--c-error-border)",
+    color: "var(--c-error)",
+    iconColor: "var(--c-error)",
+  },
 };
 
 export default function JobsPage({ selectedContractVersionId, currentJob, onJobUpdated }) {
   const [state, setState] = useState({ loading: false, error: "" });
   const [copyState, setCopyState] = useState("");
-  const stageState = useMemo(() => deriveStageState(currentJob?.status), [currentJob?.status]);
+  const [notice, setNotice] = useState("");
+
+  useEffect(() => {
+    if (!currentJob?.jobId) {
+      return;
+    }
+    if (currentJob.status !== "PENDING" && currentJob.status !== "RUNNING") {
+      return;
+    }
+
+    const timerId = window.setTimeout(async () => {
+      try {
+        const refreshed = await getGenerationJob(currentJob.jobId);
+        onJobUpdated(refreshed);
+      } catch {
+        // Keep silent here; manual refresh keeps explicit error handling.
+      }
+    }, 1500);
+
+    return () => window.clearTimeout(timerId);
+  }, [currentJob, onJobUpdated]);
 
   async function startJob() {
     if (!selectedContractVersionId) {
@@ -22,7 +72,23 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
       return;
     }
     setState({ loading: true, error: "" });
+    setCopyState("");
+    setNotice("");
     try {
+      const report = await getLatestCompatibilityReport(Number(selectedContractVersionId));
+      if (report?.level === "BREAKING") {
+        const confirmed = window.confirm(
+          `Compatibility report #${report.id} is BREAKING (recommended bump: ${report.semverRecommendation}).\n\n` +
+            `Continue and publish this incompatible version?`
+        );
+        if (!confirmed) {
+          setState({ loading: false, error: "" });
+          setNotice(
+            `Publication cancelled by user based on compatibility report #${report.id}.`
+          );
+          return;
+        }
+      }
       const job = await createGenerationJob(Number(selectedContractVersionId));
       onJobUpdated(job);
     } catch (error) {
@@ -58,50 +124,37 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
     }
   }
 
+  const statusKey = currentJob?.status ?? "";
+  const cfg = STATUS_CONFIG[statusKey] ?? null;
+
   return (
     <div className="page">
       {/* ── Controls ──────────────────────────────────────────── */}
       <Panel
         title="Generate and Publish"
-        description="Run the pipeline for the selected version. Wait for SUCCESS before moving on."
+        description="Run the pipeline for the selected version. Wait for Success before moving on."
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 12,
-            padding: "12px 16px",
-            background: "var(--c-surface-2)",
-            borderRadius: "var(--r-lg)",
-            border: "1px solid var(--c-border)",
-            marginBottom: 16,
-          }}
-        >
-          <span style={{ fontSize: "var(--text-sm)", color: "var(--c-text-2)" }}>
-            Version ID:
+        {/* Version ID — compact inline pill */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
+          <span style={{ fontSize: "var(--text-sm)", color: "var(--c-text-2)" }}>Version ID:</span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "var(--text-sm)",
+              fontWeight: 600,
+              padding: "3px 10px",
+              background: selectedContractVersionId ? "var(--c-primary-subtle)" : "var(--c-surface-2)",
+              border: `1px solid ${selectedContractVersionId ? "var(--c-primary-border)" : "var(--c-border)"}`,
+              color: selectedContractVersionId ? "var(--c-primary)" : "var(--c-text-3)",
+              borderRadius: "var(--r-full)",
+            }}
+          >
+            {selectedContractVersionId || "not selected"}
           </span>
-          <strong style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-sm)" }}>
-            {selectedContractVersionId || "—"}
-          </strong>
-          {selectedContractVersionId && (
-            <span
-              style={{
-                marginLeft: "auto",
-                fontSize: "var(--text-xs)",
-                color: "var(--c-success)",
-                fontWeight: 600,
-              }}
-            >
-              ✓ ready
-            </span>
-          )}
         </div>
 
         <div className="row" style={{ marginTop: 0 }}>
-          <button
-            disabled={state.loading || !selectedContractVersionId}
-            onClick={startJob}
-          >
+          <button disabled={state.loading || !selectedContractVersionId} onClick={startJob}>
             {state.loading ? "Submitting…" : "Generate and publish"}
           </button>
           <button
@@ -118,44 +171,92 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
             {state.error}
           </div>
         )}
+        {notice && (
+          <div className="success-msg" role="status" style={{ marginTop: 12 }}>
+            {notice}
+          </div>
+        )}
 
         <p className="helper-text">
-          When status reaches <strong>Success</strong>, proceed to step 3.
+          Status updates automatically every ~1.5s while job is in <strong>PENDING/RUNNING</strong>.
+          When it reaches <strong>Success</strong>, proceed to step 3.
         </p>
       </Panel>
 
-      {/* ── Job status ────────────────────────────────────────── */}
-      <Panel title="Job Status" description="Pipeline execution state for this generation request.">
-        {!currentJob && (
-          <p className="empty-state">No job created yet. Click Generate above.</p>
-        )}
+      {/* ── Job Status card ───────────────────────────────────── */}
+      {currentJob && cfg && (
+        <Panel title="Job Status">
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 16,
+            }}
+          >
+            {/* Job ID — above the status block */}
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)" }}>Job ID</span>
+              <span
+                style={{
+                  fontFamily: "var(--font-mono)",
+                  fontSize: "var(--text-sm)",
+                  fontWeight: 600,
+                  color: "var(--c-text)",
+                  padding: "2px 10px",
+                  background: "var(--c-surface-2)",
+                  border: "1px solid var(--c-border)",
+                  borderRadius: "var(--r-full)",
+                }}
+              >
+                {currentJob.jobId}
+              </span>
+            </div>
 
-        {currentJob && (
-          <>
-            {/* Job meta */}
+            {/* Status hero */}
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                gap: 10,
-                marginBottom: 16,
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 16,
+                padding: "14px 20px",
+                background: cfg.bg,
+                border: `1px solid ${cfg.border}`,
+                borderRadius: "var(--r-lg)",
+                maxWidth: 420,
               }}
             >
-              <div className="stat-card">
-                <span className="stat-label">Job ID</span>
-                <span className="stat-value" style={{ fontSize: "var(--text-md)", fontFamily: "var(--font-mono)" }}>
-                  {currentJob.jobId}
-                </span>
-              </div>
-              <div className="stat-card">
-                <span className="stat-label">Status</span>
-                <span style={{ marginTop: 4 }}>
-                  <StatusBadge value={currentJob.status} />
-                </span>
+              {/* Icon circle */}
+              <span
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  border: `2px solid ${cfg.iconColor}`,
+                  color: cfg.iconColor,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 20,
+                  fontWeight: 700,
+                  flexShrink: 0,
+                  background: "rgba(255,255,255,0.6)",
+                }}
+                aria-hidden="true"
+              >
+                {cfg.icon}
+              </span>
+
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "var(--text-lg)", fontWeight: 700, color: cfg.color }}>
+                  {cfg.label}
+                </div>
+                <div style={{ fontSize: "var(--text-sm)", color: "var(--c-text-2)", marginTop: 2 }}>
+                  {cfg.desc}
+                </div>
               </div>
             </div>
 
-            {/* Correlation ID */}
+            {/* Correlation ID row */}
             <div
               style={{
                 display: "flex",
@@ -165,10 +266,9 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
                 background: "var(--c-surface-2)",
                 border: "1px solid var(--c-border)",
                 borderRadius: "var(--r-md)",
-                marginBottom: 16,
               }}
             >
-              <span style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)", minWidth: 90 }}>
+              <span style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)", flexShrink: 0 }}>
                 Correlation ID
               </span>
               <span
@@ -181,63 +281,27 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
                 className="secondary"
                 disabled={!currentJob.correlationId}
                 onClick={copyCorrelationId}
-                style={{ flexShrink: 0 }}
+                style={{ flexShrink: 0, height: 30, padding: "0 12px", fontSize: "var(--text-xs)" }}
               >
                 Copy
               </button>
             </div>
 
             {copyState && (
-              <p className="helper-text" style={{ color: "var(--c-success)", marginBottom: 12 }}>
+              <p style={{ fontSize: "var(--text-sm)", color: "var(--c-success)", margin: 0 }}>
                 {copyState}
               </p>
             )}
-
-            {/* Timeline */}
-            <div className="timeline">
-              {STAGES.map((stage) => {
-                const isDone = stageState.completed.includes(stage);
-                const isActive = stageState.current === stage;
-                return (
-                  <div
-                    key={stage}
-                    className={`timeline-step${isDone ? " done" : ""}${isActive && !isDone ? " active" : ""}`}
-                  >
-                    {STAGE_LABEL[stage] ?? stage}
-                    {isDone && (
-                      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>✓</span>
-                    )}
-                    {isActive && !isDone && (
-                      <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>●</span>
-                    )}
-                  </div>
-                );
-              })}
-              {stageState.failed && (
-                <div className="timeline-step failed">
-                  Failed
-                  <span style={{ marginLeft: "auto", fontSize: "var(--text-xs)" }}>✕</span>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </Panel>
+          </div>
+        </Panel>
+      )}
 
       {/* ── Log ───────────────────────────────────────────────── */}
-      {(currentJob?.log) && (
+      {currentJob?.log && (
         <Panel title="Execution Log" description="Raw backend log for debugging failures and retries.">
           <pre>{currentJob.log}</pre>
         </Panel>
       )}
     </div>
   );
-}
-
-function deriveStageState(status) {
-  if (!status) return { completed: [], current: null, failed: false };
-  if (status === "PENDING") return { completed: [], current: "PENDING", failed: false };
-  if (status === "RUNNING") return { completed: ["PENDING"], current: "RUNNING", failed: false };
-  if (status === "SUCCESS") return { completed: ["PENDING", "RUNNING", "SUCCESS"], current: "SUCCESS", failed: false };
-  return { completed: ["PENDING", "RUNNING"], current: null, failed: true };
 }

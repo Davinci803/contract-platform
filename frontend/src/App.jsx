@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import ArtifactsPage from "./pages/ArtifactsPage";
 import CompatibilityPage from "./pages/CompatibilityPage";
 import ContractsPage from "./pages/ContractsPage";
@@ -68,6 +68,12 @@ export default function App() {
   const currentStep = flowSteps.find((step) => step.id === activeTab);
   const nextStep = flowSteps.find((step) => !step.completed);
   const currentIndex = flowSteps.findIndex((s) => s.id === activeTab);
+
+  useEffect(() => {
+    setCurrentJob(null);
+    setCompatibilityLoaded(false);
+    setArtifactsLoaded(false);
+  }, [selectedContractVersionId]);
 
   return (
     <div className="app-shell">

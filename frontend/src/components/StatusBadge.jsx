@@ -4,6 +4,7 @@ const STATUS_CLASS = {
   PENDING:      "warn",
   FAILED:       "err",
   COMPATIBLE:   "ok",
+  BREAKING:     "err",
   INCOMPATIBLE: "err"
 };
 
@@ -13,6 +14,7 @@ const STATUS_LABEL = {
   PENDING:      "Pending",
   FAILED:       "Failed",
   COMPATIBLE:   "Compatible",
+  BREAKING:     "Breaking",
   INCOMPATIBLE: "Incompatible"
 };
 

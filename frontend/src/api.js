@@ -73,6 +73,18 @@ export function createGenerationJob(contractVersionId) {
   });
 }
 
+export function analyzeCompatibility(contractVersionId) {
+  return request("/api/compatibility-reports/analyze", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ contractVersionId })
+  });
+}
+
+export function getLatestCompatibilityReport(contractVersionId) {
+  return request(`/api/compatibility-reports?contractVersionId=${encodeURIComponent(contractVersionId)}`);
+}
+
 export function getGenerationJob(jobId) {
   return request(`/api/generation-jobs/${jobId}`);
 }
