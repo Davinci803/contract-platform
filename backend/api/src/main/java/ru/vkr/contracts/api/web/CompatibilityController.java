@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import ru.vkr.contracts.api.domain.CompatibilityReport;
+import ru.vkr.contracts.api.dto.CompatibilityReportResponse;
 import ru.vkr.contracts.api.service.CompatibilityService;
 import ru.vkr.contracts.shared.dto.GenerateRequest;
 
@@ -25,18 +25,18 @@ public class CompatibilityController {
     }
 
     @GetMapping
-    public List<CompatibilityReport> list() {
+    public List<CompatibilityReportResponse> list() {
         return compatibilityService.list();
     }
 
     @GetMapping(params = "contractVersionId")
-    public CompatibilityReport latestForContractVersion(@RequestParam("contractVersionId") Long contractVersionId) {
+    public CompatibilityReportResponse latestForContractVersion(@RequestParam("contractVersionId") Long contractVersionId) {
         return compatibilityService.getLatestForContractVersion(contractVersionId);
     }
 
     @PostMapping("/analyze")
     @ResponseStatus(HttpStatus.CREATED)
-    public CompatibilityReport analyze(@Valid @RequestBody GenerateRequest request) {
+    public CompatibilityReportResponse analyze(@Valid @RequestBody GenerateRequest request) {
         return compatibilityService.analyzeAndSave(request.contractVersionId());
     }
 }

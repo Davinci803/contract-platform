@@ -18,12 +18,12 @@ const STATUS_LABEL = {
   INCOMPATIBLE: "Incompatible"
 };
 
-export default function StatusBadge({ value }) {
+export default function StatusBadge({ value, className = "" }) {
   if (!value) {
-    return <span className="badge">N/A</span>;
+    return <span className={`badge${className ? ` ${className}` : ""}`}>N/A</span>;
   }
   const normalized = String(value).toUpperCase();
   const cls = STATUS_CLASS[normalized] ?? "";
   const label = STATUS_LABEL[normalized] ?? value;
-  return <span className={`badge${cls ? ` ${cls}` : ""}`}>{label}</span>;
+  return <span className={`badge${cls ? ` ${cls}` : ""}${className ? ` ${className}` : ""}`}>{label}</span>;
 }

@@ -54,6 +54,10 @@ public class CompatibilityReport {
         return id;
     }
 
+    public ContractVersion getContractVersion() {
+        return contractVersion;
+    }
+
     public CompatibilityLevel getLevel() {
         return level;
     }
@@ -68,5 +72,19 @@ public class CompatibilityReport {
 
     public String getMigrationAdvice() {
         return migrationAdvice;
+    }
+
+    public String getContractName() {
+        if (contractVersion == null || contractVersion.getContract() == null) {
+            return "";
+        }
+        return contractVersion.getContract().getName();
+    }
+
+    public String getAvailableVersion() {
+        if (contractVersion == null || contractVersion.getVersion() == null) {
+            return "";
+        }
+        return contractVersion.getVersion();
     }
 }

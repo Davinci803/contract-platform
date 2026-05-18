@@ -434,7 +434,7 @@ export default function ContractsPage({
             {history.map((item) => (
               <button
                 key={item.contractVersionId}
-                className={`button-card${String(item.contractVersionId) === selectedContractVersionId ? " selected" : ""}`}
+                className={`button-card contract-${String(item.contractType || "").toLowerCase()}${String(item.contractVersionId) === selectedContractVersionId ? " selected" : ""}`}
                 onClick={() => onSelectVersion(String(item.contractVersionId))}
               >
                 <strong style={{ fontSize: "var(--text-base)" }}>v{item.version}</strong>

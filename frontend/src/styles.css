@@ -534,6 +534,17 @@ textarea {
 }
 .badge.info::before { background: var(--c-info); }
 
+.badge.badge-md {
+  padding: 6px 12px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.badge.badge-md::before {
+  width: 8px;
+  height: 8px;
+}
+
 /* ─── Cards ──────────────────────────────────────────────────────────────── */
 .cards {
   display: grid;
@@ -585,13 +596,29 @@ textarea {
 }
 
 .button-card.selected:hover {
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-subtle), var(--shadow-sm);
+  background: var(--c-primary-subtle);
+  transform: none;
+}
+
+.button-card.contract-asyncapi.selected {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px #ffedd5, var(--shadow-sm);
+  background: #ffedd5;
+}
+
+.button-card.contract-asyncapi.selected:hover {
+  border-color: #f97316;
+  box-shadow: 0 0 0 3px #ffedd5, var(--shadow-sm);
+  background: #ffedd5;
   transform: none;
 }
 
 /* ─── Report Browser ─────────────────────────────────────────────────────── */
 .report-browser {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
+  grid-template-columns: 330px minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   margin-top: 8px;
@@ -601,6 +628,11 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  max-height: 560px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--c-border) transparent;
 }
 
 .report-item {
@@ -619,15 +651,47 @@ textarea {
   height: auto;
 }
 
+.report-item-openapi {
+  border-color: #93c5fd;
+  background: #eff6ff;
+}
+
+.report-item-asyncapi {
+  border-color: #fdba74;
+  background: #fff7ed;
+}
+
 .report-item:hover:not(.selected) {
   border-color: var(--c-primary-border);
   background: var(--c-primary-subtle);
+}
+
+.report-item-openapi:hover:not(.selected) {
+  border-color: #60a5fa;
+  background: #dbeafe;
+}
+
+.report-item-asyncapi:hover:not(.selected) {
+  border-color: #fb923c;
+  background: #ffedd5;
 }
 
 .report-item.selected {
   border-color: var(--c-primary);
   box-shadow: 0 0 0 3px var(--c-primary-subtle);
   background: var(--c-primary-subtle);
+}
+
+.report-item-openapi.selected {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px #dbeafe;
+  background: #dbeafe;
+}
+
+.report-item-asyncapi.selected {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px #ffedd5;
+  background: #ffedd5;
 }
 
 .report-details {
@@ -721,6 +785,12 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 4px;
+}
+
+.stat-card-compact {
+  min-width: 150px;
+  max-width: 180px;
+  padding: 10px 12px;
 }
 
 .stat-label {

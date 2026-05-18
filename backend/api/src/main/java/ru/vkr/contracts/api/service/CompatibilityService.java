@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.vkr.contracts.api.domain.CompatibilityReport;
 import ru.vkr.contracts.api.domain.ContractVersion;
+import ru.vkr.contracts.api.dto.CompatibilityReportResponse;
 import ru.vkr.contracts.api.repo.CompatibilityReportRepository;
 import ru.vkr.contracts.api.repo.ContractVersionRepository;
 import ru.vkr.contracts.api.repo.GeneratedArtifactRepository;
@@ -35,24 +36,26 @@ public class CompatibilityService {
     }
 
     @Transactional(readOnly = true)
-    public List<CompatibilityReport> list() {
-        return repository.findAll();
+    public List<CompatibilityReportResponse> list() {
+        return repository.findAll().stream().map(this::toResponse).toList();
     }
 
     @Transactional(readOnly = true)
-    public CompatibilityReport getLatestForContractVersion(Long contractVersionId) {
+    public CompatibilityReportResponse getLatestForContractVersion(Long contractVersionId) {
         if (contractVersionId == null) {
             throw new IllegalArgumentException("contractVersionId must not be null");
         }
-        return repository.findTopByContractVersion_IdOrderByIdDesc(contractVersionId).orElse(null);
+        return repository.findTopByContractVersion_IdOrderByIdDesc(contractVersionId)
+                .map(this::toResponse)
+                .orElse(null);
     }
 
     @Transactional
-    public CompatibilityReport analyzeAndSave(Long contractVersionId) {
+    public CompatibilityReportResponse analyzeAndSave(Long contractVersionId) {
         ContractVersion current = contractVersionRepository.findById(contractVersionId)
                 .orElseThrow(() -> new IllegalArgumentException("Contract version not found: " + contractVersionId));
         CompatibilityResult result = analyze(current);
-        return saveReport(current, result);
+        return toResponse(saveReport(current, result));
     }
 
     @Transactional(readOnly = true)
@@ -110,5 +113,26 @@ public class CompatibilityService {
                 )
                 .map(artifact -> artifact.getJob().getContractVersion())
                 .orElse(null);
+    }
+
+    private CompatibilityReportResponse toResponse(CompatibilityReport report) {
+        ContractVersion version = report == null ? null : report.getContractVersion();
+        String contractName = version != null && version.getContract() != null
+                ? version.getContract().getName()
+                : "";
+        String availableVersion = version != null ? version.getVersion() : "";
+        ContractType contractType = version != null && version.getContract() != null
+                ? version.getContract().getType()
+                : null;
+        return new CompatibilityReportResponse(
+                report.getId(),
+                contractName,
+                availableVersion,
+                contractType,
+                report.getLevel(),
+                report.getSemverRecommendation(),
+                report.getFindings(),
+                report.getMigrationAdvice()
+        );
     }
 }
