@@ -1,10 +1,19 @@
 const STATUS_CLASS = {
-  SUCCESS: "ok",
-  RUNNING: "info",
-  PENDING: "warn",
-  FAILED: "err",
-  COMPATIBLE: "ok",
+  SUCCESS:      "ok",
+  RUNNING:      "info",
+  PENDING:      "warn",
+  FAILED:       "err",
+  COMPATIBLE:   "ok",
   INCOMPATIBLE: "err"
+};
+
+const STATUS_LABEL = {
+  SUCCESS:      "Success",
+  RUNNING:      "Running",
+  PENDING:      "Pending",
+  FAILED:       "Failed",
+  COMPATIBLE:   "Compatible",
+  INCOMPATIBLE: "Incompatible"
 };
 
 export default function StatusBadge({ value }) {
@@ -12,6 +21,7 @@ export default function StatusBadge({ value }) {
     return <span className="badge">N/A</span>;
   }
   const normalized = String(value).toUpperCase();
-  const cls = STATUS_CLASS[normalized] ?? "neutral";
-  return <span className={`badge ${cls}`}>{value}</span>;
+  const cls = STATUS_CLASS[normalized] ?? "";
+  const label = STATUS_LABEL[normalized] ?? value;
+  return <span className={`badge${cls ? ` ${cls}` : ""}`}>{label}</span>;
 }

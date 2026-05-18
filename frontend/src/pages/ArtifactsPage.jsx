@@ -3,6 +3,38 @@ import Panel from "../components/Panel";
 import StatusBadge from "../components/StatusBadge";
 import { getReadModelSummary, listArtifacts, listPublicationLogs } from "../api";
 
+const CopyIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 13 13" fill="none" aria-hidden="true">
+    <rect x="4.5" y="0.5" width="8" height="8" rx="1.5" stroke="currentColor" />
+    <path d="M3.5 3.5H1.5a1 1 0 00-1 1V11a1 1 0 001 1h6.5a1 1 0 001-1V9.5" stroke="currentColor" />
+  </svg>
+);
+
+function CopyButton({ label, value, onCopy }) {
+  const [copied, setCopied] = useState(false);
+  async function handleClick() {
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      onCopy(label);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      onCopy("— Copy failed. Check browser permissions.");
+    }
+  }
+  return (
+    <button
+      className="secondary"
+      onClick={handleClick}
+      disabled={!value}
+      style={{ fontSize: "var(--text-xs)", height: 30, padding: "0 10px" }}
+    >
+      <CopyIcon />
+      {copied ? "Copied!" : label}
+    </button>
+  );
+}
+
 export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob = null }) {
   const [summary, setSummary] = useState(null);
   const [artifacts, setArtifacts] = useState([]);
@@ -11,18 +43,20 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
   const [copiedMessage, setCopiedMessage] = useState("");
   const [activeSection, setActiveSection] = useState("events");
   const [traceMode, setTraceMode] = useState("latest");
+
   const sortedArtifacts = useMemo(
-    () => [...artifacts].sort((left, right) => Number(right.id) - Number(left.id)),
+    () => [...artifacts].sort((a, b) => Number(b.id) - Number(a.id)),
     [artifacts]
   );
   const sortedLogs = useMemo(
-    () => [...logs].sort((left, right) => Number(right.id) - Number(left.id)),
+    () => [...logs].sort((a, b) => Number(b.id) - Number(a.id)),
     [logs]
   );
 
   async function loadReadModel() {
     setState({ loading: true, error: "" });
-    const correlationId = traceMode === "current-job" ? currentJob?.correlationId ?? "" : "";
+    const correlationId =
+      traceMode === "current-job" ? currentJob?.correlationId ?? "" : "";
     try {
       const [summaryData, artifactsData, logsData] = await Promise.all([
         getReadModelSummary(),
@@ -41,81 +75,91 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
     setState({ loading: false, error: "" });
   }
 
-  async function copy(text, hintLabel) {
-    if (!text) {
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedMessage(`Copied ${hintLabel}. Paste it into external integration settings.`);
-    } catch {
-      setCopiedMessage("Copy failed. Check browser clipboard permissions.");
-    }
+  function handleCopy(label) {
+    setCopiedMessage(`${label} copied — paste it into your integration settings.`);
   }
 
   return (
     <div className="page">
+      {/* ── Controls panel ────────────────────────────────────── */}
       <Panel
-        title="Step 4: Artifacts and Publication Events"
-        description="Load read-model, then copy values needed by external services."
+        title="Artifacts and Publication Events"
+        description="Load the read-model, then copy values needed by external services."
         actions={
           <button className="secondary" disabled={state.loading} onClick={loadReadModel}>
-            {state.loading ? "Loading..." : "Load Read Model"}
+            {state.loading ? "Loading…" : "Load Read Model"}
           </button>
         }
       >
-        {state.error && <p className="error">{state.error}</p>}
-        {!state.loading && !state.error && !summary && (
-          <p className="muted">Load read model to see artifact and publication data.</p>
+        {state.error && (
+          <div className="error-msg" role="alert">
+            {state.error}
+          </div>
         )}
-        {copiedMessage && <p className="copy-success">{copiedMessage}</p>}
+
+        {!state.loading && !state.error && !summary && (
+          <p className="empty-state">Click Load Read Model to see artifacts and publication data.</p>
+        )}
+
+        {copiedMessage && (
+          <div className="success-msg" role="status">
+            {copiedMessage}
+          </div>
+        )}
+
+        {/* Stats */}
         {summary && (
           <div className="stats">
-            <article className="card">
-              <strong>Artifacts</strong>
-              <p>{summary.artifacts}</p>
-            </article>
-            <article className="card">
-              <strong>Publication Logs</strong>
-              <p>{summary.publicationLogs}</p>
-            </article>
+            <div className="stat-card">
+              <span className="stat-label">Artifacts</span>
+              <span className="stat-value">{summary.artifacts}</span>
+            </div>
+            <div className="stat-card">
+              <span className="stat-label">Publication Logs</span>
+              <span className="stat-value">{summary.publicationLogs}</span>
+            </div>
           </div>
         )}
+
+        {/* Trace mode switch */}
+        {summary && (
+          <>
+            <div className="section-switch" style={{ marginTop: 16 }}>
+              <button
+                className={traceMode === "latest" ? "active-tab" : ""}
+                onClick={() => setTraceMode("latest")}
+              >
+                Latest events
+              </button>
+              <button
+                className={traceMode === "current-job" ? "active-tab" : ""}
+                disabled={!currentJob?.correlationId}
+                onClick={() => setTraceMode("current-job")}
+              >
+                Trace current job
+              </button>
+            </div>
+
+            <p className="helper-text">
+              Filter:{" "}
+              {traceMode === "current-job" && currentJob?.correlationId
+                ? <code style={{ fontFamily: "var(--font-mono)", fontSize: "var(--text-xs)" }}>correlationId={currentJob.correlationId}</code>
+                : "last records (no correlation filter)"}
+            </p>
+          </>
+        )}
+
+        {/* View switch */}
         {summary && (
           <div className="section-switch">
             <button
-              className={traceMode === "latest" ? "" : "secondary"}
-              onClick={() => setTraceMode("latest")}
-            >
-              Latest events
-            </button>
-            <button
-              className={traceMode === "current-job" ? "" : "secondary"}
-              disabled={!currentJob?.correlationId}
-              onClick={() => setTraceMode("current-job")}
-            >
-              Trace current job by correlationId
-            </button>
-          </div>
-        )}
-        {summary && (
-          <p className="muted helper-text">
-            Active filter:{" "}
-            {traceMode === "current-job" && currentJob?.correlationId
-              ? `correlationId=${currentJob.correlationId}`
-              : "last records (no correlation filter)"}
-          </p>
-        )}
-        {summary && (
-          <div className="section-switch">
-            <button
-              className={activeSection === "events" ? "" : "secondary"}
+              className={activeSection === "events" ? "active-tab" : ""}
               onClick={() => setActiveSection("events")}
             >
               Publication Events
             </button>
             <button
-              className={activeSection === "artifacts" ? "" : "secondary"}
+              className={activeSection === "artifacts" ? "active-tab" : ""}
               onClick={() => setActiveSection("artifacts")}
             >
               Generated Artifacts
@@ -124,33 +168,53 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
         )}
       </Panel>
 
-      {activeSection === "events" && (
+      {/* ── Publication Events ────────────────────────────────── */}
+      {activeSection === "events" && summary && (
         <Panel
           title="Publication Events"
-          description="Copy correlationId to trace request -> job -> publication logs."
+          description="Copy a correlationId to trace request → job → publication logs."
         >
-          {!state.loading && sortedLogs.length === 0 && <p className="muted">No publication events found.</p>}
+          {sortedLogs.length === 0 && (
+            <p className="empty-state">No publication events found.</p>
+          )}
           {sortedLogs.length > 0 && (
             <div className="cards compact-cards">
               {sortedLogs.map((log) => (
                 <article className="card" key={log.id}>
                   <div className="split">
-                    <strong>{log.target}</strong>
+                    <strong style={{ fontSize: "var(--text-base)" }}>{log.target}</strong>
                     <StatusBadge value={log.status} />
                   </div>
-                  <p className="muted">Job: {log.jobId}</p>
-                  <p>{log.message}</p>
-                  <small>
-                    event={log.eventType} | category={log.errorCategory} | correlationId={log.correlationId}
-                  </small>
+
+                  <p style={{ fontSize: "var(--text-sm)", color: "var(--c-text-2)", margin: "4px 0" }}>
+                    {log.message}
+                  </p>
+
+                  <div className="meta-row">
+                    <span className="meta-label">Job: {log.jobId}</span>
+                    <span className="meta-label">Event: {log.eventType}</span>
+                    {log.errorCategory && (
+                      <span className="meta-label">Category: {log.errorCategory}</span>
+                    )}
+                  </div>
+
                   {log.correlationId && (
-                    <div className="row">
-                      <button
-                        className="secondary"
-                        onClick={() => copy(log.correlationId, "correlation ID")}
-                      >
-                        Copy correlation ID
-                      </button>
+                    <div
+                      style={{
+                        margin: "8px 0 4px",
+                        padding: "6px 10px",
+                        background: "var(--c-surface-2)",
+                        borderRadius: "var(--r-md)",
+                        border: "1px solid var(--c-border)",
+                      }}
+                    >
+                      <span className="mono">{log.correlationId}</span>
+                    </div>
+                  )}
+
+                  {log.correlationId && (
+                    <div className="row" style={{ marginTop: 4 }}>
+                      <CopyButton label="Copy correlation ID" value={log.correlationId} onCopy={handleCopy} />
                     </div>
                   )}
                 </article>
@@ -160,46 +224,61 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
         </Panel>
       )}
 
-      {activeSection === "artifacts" && (
+      {/* ── Generated Artifacts ───────────────────────────────── */}
+      {activeSection === "artifacts" && summary && (
         <Panel
           title="Generated Artifacts"
           description="Copy coordinates, publication URL, and schema subject for external service setup."
         >
-          {!state.loading && sortedArtifacts.length === 0 && <p className="muted">No artifacts found.</p>}
+          {sortedArtifacts.length === 0 && (
+            <p className="empty-state">No artifacts found.</p>
+          )}
           {sortedArtifacts.length > 0 && (
             <div className="cards compact-cards">
               {sortedArtifacts.map((artifact) => (
                 <article className="card" key={artifact.id}>
-                  <strong>Artifact #{artifact.id}</strong>
-                  <p>Job: {artifact.jobId}</p>
-                  <p className="mono">{artifact.coordinates}</p>
-                  <p className="mono">{artifact.publicationUrl}</p>
-                  {artifact.schemaSubject && <p className="mono">Schema: {artifact.schemaSubject}</p>}
-                  <div className="row">
-                    <button
-                      className="secondary"
-                      onClick={() => copy(artifact.coordinates, "coordinates")}
-                    >
-                      Copy coordinates
-                    </button>
-                    <button
-                      className="secondary"
-                      onClick={() => copy(artifact.publicationUrl, "publication URL")}
-                    >
-                      Copy publication URL
-                    </button>
+                  <div className="split" style={{ marginBottom: 4 }}>
+                    <strong style={{ fontSize: "var(--text-base)" }}>
+                      Artifact #{artifact.id}
+                    </strong>
+                    <span className="meta-label">Job {artifact.jobId}</span>
+                  </div>
+
+                  <div className="divider" style={{ margin: "8px 0" }} />
+
+                  {artifact.coordinates && (
+                    <div style={{ marginBottom: 6 }}>
+                      <span className="stat-label">Coordinates</span>
+                      <div className="mono" style={{ marginTop: 3 }}>{artifact.coordinates}</div>
+                    </div>
+                  )}
+
+                  {artifact.publicationUrl && (
+                    <div style={{ marginBottom: 6 }}>
+                      <span className="stat-label">Publication URL</span>
+                      <div className="mono" style={{ marginTop: 3 }}>{artifact.publicationUrl}</div>
+                    </div>
+                  )}
+
+                  {artifact.schemaSubject && (
+                    <div style={{ marginBottom: 6 }}>
+                      <span className="stat-label">Schema Subject</span>
+                      <div className="mono" style={{ marginTop: 3 }}>{artifact.schemaSubject}</div>
+                    </div>
+                  )}
+
+                  <div className="divider" style={{ margin: "8px 0" }} />
+
+                  <div className="row" style={{ marginTop: 0, gap: 6, flexWrap: "wrap" }}>
+                    <CopyButton label="Coordinates" value={artifact.coordinates} onCopy={handleCopy} />
+                    <CopyButton label="URL" value={artifact.publicationUrl} onCopy={handleCopy} />
                     {artifact.schemaSubject && (
-                      <button
-                        className="secondary"
-                        onClick={() => copy(artifact.schemaSubject, "schema subject")}
-                      >
-                        Copy schema subject
-                      </button>
+                      <CopyButton label="Schema subject" value={artifact.schemaSubject} onCopy={handleCopy} />
                     )}
                   </div>
-                  <p className="muted helper-text">
-                    coordinates -> dependency config, publication URL -> release evidence, schema
-                    subject -> registry consumer config.
+
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)", marginTop: 8 }}>
+                    coordinates → dependency config · URL → release evidence · schema subject → registry consumer
                   </p>
                 </article>
               ))}
