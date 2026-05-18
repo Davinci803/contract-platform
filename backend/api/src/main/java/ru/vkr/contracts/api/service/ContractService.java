@@ -17,15 +17,18 @@ public class ContractService {
     private final ContractRepository contractRepository;
     private final ContractVersionRepository contractVersionRepository;
     private final ValidationService validationService;
+    private final CompatibilityService compatibilityService;
 
     public ContractService(
             ContractRepository contractRepository,
             ContractVersionRepository contractVersionRepository,
-            ValidationService validationService
+            ValidationService validationService,
+            CompatibilityService compatibilityService
     ) {
         this.contractRepository = contractRepository;
         this.contractVersionRepository = contractVersionRepository;
         this.validationService = validationService;
+        this.compatibilityService = compatibilityService;
     }
 
     @Transactional
@@ -43,6 +46,7 @@ public class ContractService {
                 request.content(),
                 request.author() == null || request.author().isBlank() ? "system" : request.author()
         ));
+        compatibilityService.analyzeAndSave(created.getId());
         return new ContractVersionResponse(
                 contract.getId(),
                 contract.getName(),

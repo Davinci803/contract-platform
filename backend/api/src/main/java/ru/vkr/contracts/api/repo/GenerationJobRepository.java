@@ -27,6 +27,7 @@ public interface GenerationJobRepository extends JpaRepository<GenerationJob, Lo
     );
 
     List<GenerationJob> findByStatusAndUpdatedAtBefore(JobStatus status, Instant updatedAtBefore);
+    List<GenerationJob> findByStatusAndCreatedAtBefore(JobStatus status, Instant createdAtBefore);
 
     @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""

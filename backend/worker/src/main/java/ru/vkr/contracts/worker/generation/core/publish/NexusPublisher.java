@@ -42,13 +42,13 @@ public class NexusPublisher {
                 + "/" + version;
         String jarUrl = basePath + "/" + artifactId + "-" + version + ".jar";
         String pomUrl = basePath + "/" + artifactId + "-" + version + ".pom";
-        uploadFile(jarUrl, jarFile, "application/java-archive");
-        uploadFile(pomUrl, pomFile, "application/xml");
+        uploadFile(jarUrl, jarFile, "application/java-archive", log);
+        uploadFile(pomUrl, pomFile, "application/xml", log);
         appendStage(log, "publish", "uploaded jar and pom");
         return jarUrl;
     }
 
-    private void uploadFile(String targetUrl, Path file, String contentType) {
+    private void uploadFile(String targetUrl, Path file, String contentType, StringBuilder log) {
         try {
             HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
                     .uri(URI.create(targetUrl))
@@ -61,6 +61,10 @@ public class NexusPublisher {
             HttpResponse<String> response = httpClient.send(requestBuilder.build(), HttpResponse.BodyHandlers.ofString());
             int statusCode = response.statusCode();
             if (statusCode < 200 || statusCode >= 300) {
+                if (isAlreadyPublishedConflict(statusCode, targetUrl)) {
+                    appendStage(log, "publish", "artifact already exists in Nexus, reusing: " + targetUrl);
+                    return;
+                }
                 String message = "Nexus upload failed [" + statusCode + "] for " + targetUrl + ": " + trim(response.body());
                 if (isTransientStatus(statusCode)) {
                     throw new TransientGenerationException(message);
@@ -72,6 +76,28 @@ public class NexusPublisher {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new TransientGenerationException("Nexus upload interrupted for " + targetUrl, e);
+        }
+    }
+
+    private boolean isAlreadyPublishedConflict(int statusCode, String targetUrl) {
+        if (statusCode != 400 && statusCode != 409) {
+            return false;
+        }
+        try {
+            HttpRequest.Builder existsRequest = HttpRequest.newBuilder()
+                    .uri(URI.create(targetUrl))
+                    .GET();
+            if (!nexusUsername.isBlank()) {
+                String token = Base64.getEncoder().encodeToString((nexusUsername + ":" + nexusPassword).getBytes(StandardCharsets.UTF_8));
+                existsRequest.header("Authorization", "Basic " + token);
+            }
+            HttpResponse<Void> existsResponse = httpClient.send(existsRequest.build(), HttpResponse.BodyHandlers.discarding());
+            return existsResponse.statusCode() >= 200 && existsResponse.statusCode() < 300;
+        } catch (IOException e) {
+            return false;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
         }
     }
 

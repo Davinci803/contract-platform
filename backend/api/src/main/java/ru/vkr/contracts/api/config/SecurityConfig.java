@@ -58,7 +58,12 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/actuator/info").hasRole("ADMIN")
                         .requestMatchers("/actuator/metrics/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.POST, "/api/contracts/versions", "/api/generation-jobs")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/contracts/versions",
+                                "/api/generation-jobs",
+                                "/api/compatibility-reports/analyze"
+                        )
                         .hasAnyRole("ADMIN", "DEVELOPER")
                         .requestMatchers(HttpMethod.GET, "/api/**")
                         .hasAnyRole("ADMIN", "DEVELOPER", "VIEWER")
@@ -81,7 +86,12 @@ public class SecurityConfig {
                         .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
                         .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                         .requestMatchers("/actuator/metrics/**").hasAnyRole("ADMIN", "DEVELOPER")
-                        .requestMatchers(HttpMethod.POST, "/api/contracts/versions", "/api/generation-jobs")
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/contracts/versions",
+                                "/api/generation-jobs",
+                                "/api/compatibility-reports/analyze"
+                        )
                         .hasAnyRole("ADMIN", "DEVELOPER")
                         .requestMatchers(HttpMethod.GET, "/api/**")
                         .hasAnyRole("ADMIN", "DEVELOPER", "VIEWER")

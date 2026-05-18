@@ -1,10 +1,12 @@
 package ru.vkr.contracts.api.service;
 
-import org.springframework.core.task.TaskRejectedException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import ru.vkr.contracts.api.config.GenerationMetrics;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import ru.vkr.contracts.api.domain.ContractVersion;
 import ru.vkr.contracts.api.domain.GenerationJob;
 import ru.vkr.contracts.api.domain.PublicationLog;
@@ -15,24 +17,23 @@ import ru.vkr.contracts.api.repo.PublicationLogRepository;
 
 @Service
 public class GenerationJobService {
+    private static final Logger log = LoggerFactory.getLogger(GenerationJobService.class);
+
     private final ContractVersionRepository contractVersionRepository;
     private final GenerationJobRepository generationJobRepository;
     private final PublicationLogRepository publicationLogRepository;
     private final GenerationJobProcessor generationJobProcessor;
-    private final GenerationMetrics generationMetrics;
 
     public GenerationJobService(
             ContractVersionRepository contractVersionRepository,
             GenerationJobRepository generationJobRepository,
             PublicationLogRepository publicationLogRepository,
-            GenerationJobProcessor generationJobProcessor,
-            GenerationMetrics generationMetrics
+            GenerationJobProcessor generationJobProcessor
     ) {
         this.contractVersionRepository = contractVersionRepository;
         this.generationJobRepository = generationJobRepository;
         this.publicationLogRepository = publicationLogRepository;
         this.generationJobProcessor = generationJobProcessor;
-        this.generationMetrics = generationMetrics;
     }
 
     @Transactional
@@ -49,21 +50,19 @@ public class GenerationJobService {
                 "JOB_CREATED",
                 PublicationLog.ERROR_CATEGORY_NONE
         ));
-        try {
-            generationJobProcessor.processAsync(job.getId());
-        } catch (TaskRejectedException e) {
-            String message = "Generation queue is overloaded. Please retry later.";
-            generationMetrics.incrementRetryNeeded(contractVersion.getContract().getType(), "queue_rejected");
-            publicationLogRepository.save(new PublicationLog(
-                    job,
-                    "PIPELINE",
-                    "FAILED_RETRYABLE",
-                    "event=queue-rejected; message=" + message,
-                    "QUEUE_REJECTED",
-                    PublicationLog.ERROR_CATEGORY_TECHNICAL
-            ));
-            job.markFailed(message);
-        }
+        Long jobId = job.getId();
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                try {
+                    generationJobProcessor.processAsync(jobId);
+                } catch (RuntimeException asyncDispatchError) {
+                    // Fallback ensures the job is not stuck in PENDING due to async dispatch problems.
+                    log.warn("Async dispatch failed for jobId={}, running sync fallback", jobId, asyncDispatchError);
+                    generationJobProcessor.processNow(jobId);
+                }
+            }
+        });
         return toResponse(job);
     }
 

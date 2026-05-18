@@ -46,6 +46,10 @@ public class GeneratedArtifact {
         return job.getId();
     }
 
+    public GenerationJob getJob() {
+        return job;
+    }
+
     public String getCoordinates() {
         return coordinates;
     }

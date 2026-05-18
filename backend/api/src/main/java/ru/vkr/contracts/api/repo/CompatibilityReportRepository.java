@@ -5,4 +5,5 @@ import ru.vkr.contracts.api.domain.CompatibilityReport;
 
 public interface CompatibilityReportRepository extends JpaRepository<CompatibilityReport, Long> {
     long countByContractVersion_Id(Long contractVersionId);
+    java.util.Optional<CompatibilityReport> findTopByContractVersion_IdOrderByIdDesc(Long contractVersionId);
 }

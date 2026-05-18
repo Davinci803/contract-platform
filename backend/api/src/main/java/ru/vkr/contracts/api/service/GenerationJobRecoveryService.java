@@ -24,21 +24,27 @@ public class GenerationJobRecoveryService {
     private final GenerationJobRepository generationJobRepository;
     private final PublicationLogRepository publicationLogRepository;
     private final GenerationMetrics generationMetrics;
+    private final GenerationJobProcessor generationJobProcessor;
     private final boolean recoveryEnabled;
     private final long staleThresholdMs;
+    private final long pendingThresholdMs;
 
     public GenerationJobRecoveryService(
             GenerationJobRepository generationJobRepository,
             PublicationLogRepository publicationLogRepository,
             GenerationMetrics generationMetrics,
+            GenerationJobProcessor generationJobProcessor,
             @Value("${generation.jobs.recovery.enabled:true}") boolean recoveryEnabled,
-            @Value("${generation.jobs.recovery.stale-threshold-ms:600000}") long staleThresholdMs
+            @Value("${generation.jobs.recovery.stale-threshold-ms:600000}") long staleThresholdMs,
+            @Value("${generation.jobs.recovery.pending-threshold-ms:30000}") long pendingThresholdMs
     ) {
         this.generationJobRepository = generationJobRepository;
         this.publicationLogRepository = publicationLogRepository;
         this.generationMetrics = generationMetrics;
+        this.generationJobProcessor = generationJobProcessor;
         this.recoveryEnabled = recoveryEnabled;
         this.staleThresholdMs = staleThresholdMs;
+        this.pendingThresholdMs = pendingThresholdMs;
     }
 
     @Scheduled(fixedDelayString = "${generation.jobs.recovery.scan-interval-ms:60000}")
@@ -65,6 +71,20 @@ public class GenerationJobRecoveryService {
                 job.markFailed(message);
                 generationMetrics.incrementRetryNeeded(job.getContractVersion().getContract().getType(), "watchdog_timeout");
                 log.warn("Watchdog marked stale job as failed: jobId={} correlationId={}", job.getId(), job.getCorrelationId());
+            } finally {
+                MDC.remove("correlationId");
+            }
+        }
+
+        Instant pendingBefore = Instant.now().minusMillis(pendingThresholdMs);
+        List<GenerationJob> stalePendingJobs = generationJobRepository.findByStatusAndCreatedAtBefore(JobStatus.PENDING, pendingBefore);
+        for (GenerationJob job : stalePendingJobs) {
+            MDC.put("correlationId", job.getCorrelationId());
+            try {
+                boolean claimed = generationJobProcessor.processNow(job.getId());
+                if (claimed) {
+                    log.info("Watchdog picked stale PENDING job: jobId={} correlationId={}", job.getId(), job.getCorrelationId());
+                }
             } finally {
                 MDC.remove("correlationId");
             }
