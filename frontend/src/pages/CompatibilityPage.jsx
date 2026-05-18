@@ -162,12 +162,15 @@ export default function CompatibilityPage({ onReportsLoaded = () => {} }) {
                       border: "1px solid var(--c-border)",
                     }}
                   >
-                    {selectedReport.migrationAdvice}
+                    {localizeMigrationAdvice(selectedReport.migrationAdvice)}
                   </p>
                 )}
 
-                <details open>
-                  <summary>Findings</summary>
+                <details>
+                  <summary>
+                    <span className="summary-chevron" aria-hidden="true">▸</span>
+                    Findings
+                  </summary>
                   <pre>{selectedReport.findings}</pre>
                 </details>
               </article>
@@ -256,4 +259,45 @@ function resolveReportContractType(report, contractTypeByName) {
     return "openapi";
   }
   return "";
+}
+
+function localizeMigrationAdvice(adviceRaw) {
+  const advice = String(adviceRaw || "").trim();
+  if (!advice) {
+    return "";
+  }
+
+  if (
+    advice ===
+    "Initial release detected. Publish as MINOR, announce baseline, and lock compatibility checks for the next revision."
+  ) {
+    return "Обнаружен первый релиз. Публикуйте как MINOR, зафиксируйте baseline и включите проверки совместимости для следующей версии.";
+  }
+
+  if (advice.startsWith("Non-breaking changes detected. Bump ")) {
+    const semver = advice.match(/Bump\s+([A-Z]+)/)?.[1] ?? "MINOR";
+    return `Обнаружены не ломающие изменения. Увеличьте версию на ${semver}, обновите changelog и выполните smoke-тесты потребителей перед rollout.`;
+  }
+
+  if (advice.startsWith("Breaking REST changes detected in ")) {
+    const hotspots = advice
+      .replace("Breaking REST changes detected in ", "")
+      .replace(
+        ". Publish MAJOR, keep deprecated endpoint/field aliases for one transition window, and share migration examples with consumers.",
+        ""
+      );
+    return `Обнаружены ломающие изменения REST в: ${hotspots}. Публикуйте MAJOR, сохраните deprecated endpoint/field aliases на один переходный период и дайте потребителям примеры миграции.`;
+  }
+
+  if (advice.startsWith("Breaking event-schema changes detected in ")) {
+    const hotspots = advice
+      .replace("Breaking event-schema changes detected in ", "")
+      .replace(
+        ". Publish MAJOR, version topic/subject names, and run dual-consumer mode until all consumers are migrated.",
+        ""
+      );
+    return `Обнаружены ломающие изменения event-schema в: ${hotspots}. Публикуйте MAJOR, версионируйте topic/subject names и используйте dual-consumer режим, пока все потребители не мигрируют.`;
+  }
+
+  return advice;
 }

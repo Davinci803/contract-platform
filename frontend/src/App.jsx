@@ -148,6 +148,7 @@ export default function App() {
         )}
         {activeTab === "jobs" && (
           <JobsPage
+            selectedContractId={selectedContractId}
             selectedContractVersionId={selectedContractVersionId}
             currentJob={currentJob}
             onJobUpdated={setCurrentJob}

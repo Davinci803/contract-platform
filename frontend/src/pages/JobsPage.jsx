@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import Panel from "../components/Panel";
-import { createGenerationJob, getGenerationJob, getLatestCompatibilityReport } from "../api";
+import { createGenerationJob, getContractHistory, getGenerationJob, getLatestCompatibilityReport } from "../api";
 
 const STATUS_CONFIG = {
   PENDING: {
@@ -41,10 +41,46 @@ const STATUS_CONFIG = {
   },
 };
 
-export default function JobsPage({ selectedContractVersionId, currentJob, onJobUpdated }) {
+export default function JobsPage({ selectedContractId, selectedContractVersionId, currentJob, onJobUpdated }) {
   const [state, setState] = useState({ loading: false, error: "" });
   const [copyState, setCopyState] = useState("");
   const [notice, setNotice] = useState("");
+  const [selectedVersionMeta, setSelectedVersionMeta] = useState(null);
+
+  useEffect(() => {
+    if (!selectedContractId || !selectedContractVersionId) {
+      setSelectedVersionMeta(null);
+      return;
+    }
+
+    let cancelled = false;
+    getContractHistory(selectedContractId)
+      .then((history) => {
+        if (cancelled) return;
+        const selected = history.find(
+          (item) => String(item.contractVersionId) === String(selectedContractVersionId)
+        );
+        if (!selected) {
+          setSelectedVersionMeta(null);
+          return;
+        }
+        setSelectedVersionMeta({
+          contractName: selected.contractName,
+          contractType: selected.contractType,
+          version: selected.version,
+          contractVersionId: selected.contractVersionId,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setSelectedVersionMeta(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedContractId, selectedContractVersionId]);
 
   useEffect(() => {
     if (!currentJob?.jobId) {
@@ -106,22 +142,6 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
     setState({ loading: false, error: "" });
   }
 
-  async function refreshJob() {
-    if (!currentJob?.jobId) {
-      setState({ loading: false, error: "No job created yet." });
-      return;
-    }
-    setState({ loading: true, error: "" });
-    try {
-      const refreshed = await getGenerationJob(currentJob.jobId);
-      onJobUpdated(refreshed);
-    } catch (error) {
-      setState({ loading: false, error: error.message });
-      return;
-    }
-    setState({ loading: false, error: "" });
-  }
-
   async function copyCorrelationId() {
     if (!currentJob?.correlationId) return;
     try {
@@ -137,42 +157,43 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
 
   return (
     <div className="page">
-      {/* ── Controls ──────────────────────────────────────────── */}
-      <Panel
-        title="Generate and Publish"
-        description="Run the pipeline for the selected version. Wait for Success before moving on."
-      >
-        {/* Version ID — compact inline pill */}
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16, flexWrap: "wrap" }}>
-          <span style={{ fontSize: "var(--text-sm)", color: "var(--c-text-2)" }}>Version ID:</span>
-          <span
-            style={{
-              fontFamily: "var(--font-mono)",
-              fontSize: "var(--text-sm)",
-              fontWeight: 600,
-              padding: "3px 10px",
-              background: selectedContractVersionId ? "var(--c-primary-subtle)" : "var(--c-surface-2)",
-              border: `1px solid ${selectedContractVersionId ? "var(--c-primary-border)" : "var(--c-border)"}`,
-              color: selectedContractVersionId ? "var(--c-primary)" : "var(--c-text-3)",
-              borderRadius: "var(--r-full)",
-            }}
-          >
-            {selectedContractVersionId || "not selected"}
-          </span>
+      <div className="jobs-top-grid">
+        {/* ── Controls ──────────────────────────────────────────── */}
+        <Panel
+          title="Generate and Publish"
+          description="Run the pipeline for the selected version. Wait for Success before moving on."
+        >
+        <div className="version-summary">
+          <div className="version-summary-top">
+            <span className={`contract-type-chip contract-type-chip-${String(selectedVersionMeta?.contractType || "").toLowerCase()}`}>
+              {selectedVersionMeta?.contractType === "ASYNCAPI" ? "AsyncAPI" : selectedVersionMeta?.contractType === "OPENAPI" ? "OpenAPI" : "Type not selected"}
+            </span>
+          </div>
+          <div className="version-summary-line">
+            <span className="version-summary-label">Contract:</span>
+            <strong className="version-summary-value">
+              {selectedVersionMeta?.contractName || "Not selected"}
+            </strong>
+          </div>
+          <div className="version-summary-line">
+            <span className="version-summary-label">Version:</span>
+            <strong className="version-summary-value">
+              {selectedVersionMeta?.version ? `v${selectedVersionMeta.version}` : "—"}
+            </strong>
+          </div>
+          <div className="version-summary-line">
+            <span className="version-summary-label">Version ID:</span>
+            <span className="version-summary-id">
+              {selectedVersionMeta?.contractVersionId || selectedContractVersionId || "not selected"}
+            </span>
+          </div>
         </div>
 
-        <div className="row" style={{ marginTop: 0 }}>
-          <button disabled={state.loading || !selectedContractVersionId} onClick={startJob}>
-            {state.loading ? "Submitting…" : "Generate and publish"}
-          </button>
-          <button
-            className="secondary"
-            disabled={state.loading || !currentJob?.jobId}
-            onClick={refreshJob}
-          >
-            Refresh status
-          </button>
-        </div>
+          <div className="row" style={{ marginTop: 0 }}>
+            <button disabled={state.loading || !selectedContractVersionId} onClick={startJob}>
+              {state.loading ? "Submitting…" : "Generate and publish"}
+            </button>
+          </div>
 
         {state.error && (
           <div className="error-msg" role="alert" style={{ marginTop: 12 }}>
@@ -185,14 +206,13 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
           </div>
         )}
 
-        <p className="helper-text">
-          Status updates automatically every ~1.5s while job is in <strong>PENDING/RUNNING</strong>.
-          When it reaches <strong>Success</strong>, proceed to step 3.
-        </p>
-      </Panel>
+          <p className="helper-text">
+            Status updates automatically every ~1.5s while job is in <strong>PENDING/RUNNING</strong>.
+            When it reaches <strong>Success</strong>, proceed to step 3.
+          </p>
+        </Panel>
 
-      {/* ── Job Status card ───────────────────────────────────── */}
-      {currentJob && cfg && (
+        {/* ── Job Status card ───────────────────────────────────── */}
         <Panel title="Job Status">
           <div
             style={{
@@ -201,6 +221,21 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
               gap: 16,
             }}
           >
+            {!currentJob || !cfg ? (
+              <div
+                style={{
+                  padding: "12px 14px",
+                  background: "var(--c-surface-2)",
+                  border: "1px dashed var(--c-border)",
+                  borderRadius: "var(--r-md)",
+                  color: "var(--c-text-2)",
+                  fontSize: "var(--text-sm)",
+                }}
+              >
+                Job is not started yet. Click <strong>Generate and publish</strong>.
+              </div>
+            ) : (
+              <>
             {/* Job ID — above the status block */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <span style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)" }}>Job ID</span>
@@ -264,49 +299,50 @@ export default function JobsPage({ selectedContractVersionId, currentJob, onJobU
               </div>
             </div>
 
-            {/* Correlation ID row */}
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-                padding: "10px 14px",
-                background: "var(--c-surface-2)",
-                border: "1px solid var(--c-border)",
-                borderRadius: "var(--r-md)",
-              }}
-            >
-              <span style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)", flexShrink: 0 }}>
-                Correlation ID
-              </span>
-              <span
-                className="mono"
-                style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-              >
-                {currentJob.correlationId || "—"}
-              </span>
-              <button
-                className="secondary"
-                disabled={!currentJob.correlationId}
-                onClick={copyCorrelationId}
-                style={{ flexShrink: 0, height: 30, padding: "0 12px", fontSize: "var(--text-xs)" }}
-              >
-                Copy
-              </button>
-            </div>
-
-            {copyState && (
-              <p style={{ fontSize: "var(--text-sm)", color: "var(--c-success)", margin: 0 }}>
-                {copyState}
-              </p>
+              </>
             )}
           </div>
         </Panel>
-      )}
+      </div>
 
       {/* ── Log ───────────────────────────────────────────────── */}
       {currentJob?.log && (
         <Panel title="Execution Log" description="Raw backend log for debugging failures and retries.">
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 10,
+          padding: "10px 14px",
+          marginBottom: 10,
+          background: "var(--c-surface-2)",
+          border: "1px solid var(--c-border)",
+          borderRadius: "var(--r-md)",
+        }}
+      >
+        <span style={{ fontSize: "var(--text-xs)", color: "var(--c-text-3)", flexShrink: 0 }}>
+          Correlation ID
+        </span>
+        <span
+          className="mono"
+          style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+        >
+          {currentJob.correlationId || "—"}
+        </span>
+        <button
+          className="secondary"
+          disabled={!currentJob.correlationId}
+          onClick={copyCorrelationId}
+          style={{ flexShrink: 0, height: 30, padding: "0 12px", fontSize: "var(--text-xs)" }}
+        >
+          Copy
+        </button>
+      </div>
+      {copyState && (
+        <p style={{ fontSize: "var(--text-sm)", color: "var(--c-success)", margin: "0 0 10px" }}>
+          {copyState}
+        </p>
+      )}
           <pre>{currentJob.log}</pre>
         </Panel>
       )}
