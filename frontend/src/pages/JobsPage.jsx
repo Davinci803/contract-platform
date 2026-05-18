@@ -154,6 +154,8 @@ export default function JobsPage({ selectedContractId, selectedContractVersionId
 
   const statusKey = currentJob?.status ?? "";
   const cfg = STATUS_CONFIG[statusKey] ?? null;
+  const generateButtonTypeClass =
+    selectedVersionMeta?.contractType === "ASYNCAPI" ? "asyncapi" : "openapi";
 
   return (
     <div className="page">
@@ -190,7 +192,11 @@ export default function JobsPage({ selectedContractId, selectedContractVersionId
         </div>
 
           <div className="row" style={{ marginTop: 0 }}>
-            <button disabled={state.loading || !selectedContractVersionId} onClick={startJob}>
+            <button
+              className={`generate-action-btn ${generateButtonTypeClass}`}
+              disabled={state.loading || !selectedContractVersionId}
+              onClick={startJob}
+            >
               {state.loading ? "Submitting…" : "Generate and publish"}
             </button>
           </div>

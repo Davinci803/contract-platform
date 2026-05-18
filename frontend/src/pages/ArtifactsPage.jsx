@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Panel from "../components/Panel";
 import StatusBadge from "../components/StatusBadge";
 import { getReadModelSummary, listArtifacts, listPublicationLogs } from "../api";
@@ -75,6 +75,10 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
     setState({ loading: false, error: "" });
   }
 
+  useEffect(() => {
+    loadReadModel();
+  }, []);
+
   function handleCopy(label) {
     setCopiedMessage(`${label} copied — paste it into your integration settings.`);
   }
@@ -85,11 +89,6 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
       <Panel
         title="Artifacts and Publication Events"
         description="Load the read-model, then copy values needed by external services."
-        actions={
-          <button className="secondary" disabled={state.loading} onClick={loadReadModel}>
-            {state.loading ? "Loading…" : "Load Read Model"}
-          </button>
-        }
       >
         {state.error && (
           <div className="error-msg" role="alert">
@@ -98,7 +97,7 @@ export default function ArtifactsPage({ onReadModelLoaded = () => {}, currentJob
         )}
 
         {!state.loading && !state.error && !summary && (
-          <p className="empty-state">Click Load Read Model to see artifacts and publication data.</p>
+          <p className="empty-state">Read model is empty. Upload and publish a contract version first.</p>
         )}
 
         {copiedMessage && (

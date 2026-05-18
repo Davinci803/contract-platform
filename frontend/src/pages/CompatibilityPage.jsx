@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Panel from "../components/Panel";
 import StatusBadge from "../components/StatusBadge";
 import { listCompatibilityReports, listContracts } from "../api";
@@ -24,6 +24,10 @@ export default function CompatibilityPage({ onReportsLoaded = () => {} }) {
     () => findingCodes.map((code) => ({ code, label: humanizeFindingCode(code) })),
     [findingCodes]
   );
+  const semverDisplay = useMemo(
+    () => resolveSemverDisplay(selectedReport?.semverRecommendation, findingCodes),
+    [selectedReport?.semverRecommendation, findingCodes]
+  );
 
   async function loadReports() {
     setState({ loading: true, error: "" });
@@ -47,16 +51,15 @@ export default function CompatibilityPage({ onReportsLoaded = () => {} }) {
     setState({ loading: false, error: "" });
   }
 
+  useEffect(() => {
+    loadReports();
+  }, []);
+
   return (
     <div className="page">
       <Panel
         title="Compatibility Check"
         description="Load reports to review the SemVer recommendation, risk level, and migration advice."
-        actions={
-          <button className="secondary" disabled={state.loading} onClick={loadReports}>
-            {state.loading ? "Loading…" : "Load Reports"}
-          </button>
-        }
       >
         {state.error && (
           <div className="error-msg" role="alert">
@@ -120,10 +123,10 @@ export default function CompatibilityPage({ onReportsLoaded = () => {} }) {
                   <div className="stat-card stat-card-compact">
                     <span className="stat-label">SemVer bump</span>
                     <span
-                      className="stat-value"
-                      style={{ fontSize: "var(--text-md)", color: "var(--c-primary)" }}
+                      className={`stat-value semver-bump ${semverDisplay.className}`}
+                      style={{ fontSize: "var(--text-md)" }}
                     >
-                      {selectedReport.semverRecommendation}
+                      {semverDisplay.label}
                     </span>
                   </div>
 
@@ -259,6 +262,27 @@ function resolveReportContractType(report, contractTypeByName) {
     return "openapi";
   }
   return "";
+}
+
+function resolveSemverClass(semverRecommendation) {
+  const semver = String(semverRecommendation || "").toUpperCase();
+  if (semver === "MAJOR") return "semver-major";
+  if (semver === "MINOR") return "semver-minor";
+  if (semver === "PATCH") return "semver-patch";
+  return "semver-default";
+}
+
+function resolveSemverDisplay(semverRecommendation, findingCodes) {
+  if (Array.isArray(findingCodes) && findingCodes.includes("NO_CHANGES")) {
+    return { label: "NO DIFF", className: "semver-no-diff" };
+  }
+  if (Array.isArray(findingCodes) && findingCodes.includes("INITIAL_VERSION")) {
+    return { label: "INIT", className: "semver-init" };
+  }
+  return {
+    label: String(semverRecommendation || "—"),
+    className: resolveSemverClass(semverRecommendation),
+  };
 }
 
 function localizeMigrationAdvice(adviceRaw) {

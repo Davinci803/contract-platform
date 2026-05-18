@@ -287,6 +287,8 @@ export default function ContractsPage({
     setUploadState({ loading: false, error: "", done: true });
   }
 
+  const uploadButtonTypeClass = type === "ASYNCAPI" ? "asyncapi" : "openapi";
+
   return (
     <div className="page">
       {/* ── Upload form ─────────────────────────────────────── */}
@@ -361,7 +363,11 @@ export default function ContractsPage({
         </label>
 
         <div className="row" style={{ marginTop: 4 }}>
-          <button disabled={uploadState.loading || !name.trim()} onClick={upload}>
+          <button
+            className={`upload-action-btn ${uploadButtonTypeClass}`}
+            disabled={uploadState.loading || !name.trim()}
+            onClick={upload}
+          >
             {uploadState.loading ? "Uploading…" : "Upload and select version"}
           </button>
         </div>
